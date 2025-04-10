@@ -1,0 +1,40 @@
+{
+  "_$ver": 1,
+  "_$id": "87emgu6u",
+  "_$type": "Dialog",
+  "name": "Dialog",
+  "x": 213,
+  "y": 85,
+  "width": 235,
+  "height": 235,
+  "dragArea": "100,100,640,640",
+  "_$child": [
+    {
+      "_$id": "3szfm2z4",
+      "_$type": "Box",
+      "name": "Box",
+      "width": 235,
+      "height": 235,
+      "left": 0,
+      "right": 0,
+      "top": 0,
+      "bottom": 0,
+      "bgColor": "rgba(89,93,183,0.5137254901960784)"
+    },
+    {
+      "_$id": "x6m64yl5",
+      "_$type": "Button",
+      "name": "close",
+      "x": 195,
+      "width": 40,
+      "height": 40,
+      "right": 0,
+      "top": 0,
+      "skin": "res://60a9086c-a9c2-4e01-a563-355c117b509e",
+      "label": "",
+      "labelSize": 20,
+      "labelAlign": "center",
+      "labelVAlign": "middle"
+    }
+  ]
+}

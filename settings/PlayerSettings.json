@@ -24,7 +24,8 @@
   },
   "modules": {
     "laya.ui": true,
-    "laya.d3": true
+    "laya.d3": true,
+    "laya.spine": true
   },
   "splash": {
     "fit": "center"

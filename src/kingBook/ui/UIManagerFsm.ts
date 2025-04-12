@@ -1,5 +1,5 @@
 import { Fsm } from "../fsm/Fsm";
-import { UIStart } from "./UiStart";
+import { UIStart } from "./UIStart";
 
 const { regClass, property } = Laya;
 

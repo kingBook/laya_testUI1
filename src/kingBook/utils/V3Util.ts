@@ -150,19 +150,19 @@ export class V3Util {
         const y = a.y;
         const z = a.z;
 
-        if (Math.abs(x) < MathUtil.EPSILON) {
+        if (Math.abs(x) < MathUtil.epsilon) {
             out.x = 0;
         } else {
             out.x = 1.0 / x;
         }
 
-        if (Math.abs(y) < MathUtil.EPSILON) {
+        if (Math.abs(y) < MathUtil.epsilon) {
             out.y = 0;
         } else {
             out.y = 1.0 / y;
         }
 
-        if (Math.abs(z) < MathUtil.EPSILON) {
+        if (Math.abs(z) < MathUtil.epsilon) {
             out.z = 0;
         } else {
             out.z = 1.0 / z;

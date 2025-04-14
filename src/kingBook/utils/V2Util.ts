@@ -160,7 +160,7 @@ export class V2Util {
     }
 
     /** 排除浮点数误差的向量近似等价判断 */
-    public static equals<T extends Laya.IV2>(a: T, b: T, epsilon = MathUtil.EPSILON): boolean {
+    public static equals<T extends Laya.IV2>(a: T, b: T, epsilon = MathUtil.epsilon): boolean {
         return (
             Math.abs(a.x - b.x)
             <= epsilon * Math.max(1.0, Math.abs(a.x), Math.abs(b.x))

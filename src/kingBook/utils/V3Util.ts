@@ -1,6 +1,6 @@
 import { MathUtil } from "./MathUtil";
 
-interface IV3 {
+export interface IV3 {
     x: number;
     y: number;
     z: number;

@@ -20,7 +20,7 @@ export class TestNestedList extends Laya.Script {
             const displayCount = 5; // 能显示的个数
             const len = Math.max(count, displayCount); // 限制元素的数量最少5个
             for (let i = 0; i < len; i++) {
-                const isEmpty = count < displayCount && (i + i) >= count;
+                const isEmpty = count < displayCount && (i + 1) >= count;
                 subItemDatas.push({
                     labelNum: `${i} ${isEmpty ? '空' : ''}`,
                     alpha: isEmpty ? 0.5 : 1

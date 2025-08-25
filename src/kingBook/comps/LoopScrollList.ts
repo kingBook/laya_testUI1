@@ -17,10 +17,13 @@ export class LoopScrollList extends Laya.Script {
         const scrollBar = this.owner.scrollBar;
 
         if (evt.key == 'h') {
+            console.log(" scrollBar.value1:", scrollBar.value);
+
             this.owner.addItem(this.owner.getItem(0));
             this.owner.deleteItem(0);
             this.owner.refresh();
-            scrollBar.value-=100;
+            console.log(" scrollBar.value2:", scrollBar.value);
+            scrollBar.value -= 100;
 
         } else if (evt.key == 'p') {
             this.setPause(!this._isPause);
@@ -37,7 +40,7 @@ export class LoopScrollList extends Laya.Script {
 
         scrollBar.value += 1
 
-        console.log(scrollBar.value);
+        // console.log(scrollBar.value);
 
 
 

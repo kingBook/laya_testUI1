@@ -1,71 +1,165 @@
 const { regClass, property } = Laya;
 
+/** 布尔标记 */
+enum Flag {
+    /** 已初始化 */
+    Inited = 1,
+    /** 滚动中... */
+    Scrolling = 2,
+    /** 暂停中... */
+    Pauseing = 4
+}
+
+/**
+ * 循环滚动列表
+ */
 @regClass()
 export class LoopScrollList extends Laya.Script {
 
     declare owner: Laya.List;
 
-    private _isPause: boolean;
 
-    public onEnable(): void {
-        this.setPause(true);
-    }
+    /** 额外添加的重复列表项数量 */
+    private _extraNum: number;
 
-    onKeyDown(evt: Laya.Event): void {
+
+    /** 速度<像素/秒> */
+    private _speed: number = 0;
+    /** 目标速度的插值，区间为：[0,1] */
+    private _speedTargetT: number = 0;
+
+    /** 启动后，逐渐加速最终到达的目标速度<像素/秒> */
+    public speedTarget: number = 0;
+    /** 启动加速度系数， 区间为：[0,1] */
+    public startupAccelerationT: number = 0.1;
+    /** 最小速度<像素/秒, 正数> */
+    public minSpeed: number = 0.1;
+
+    /** 布尔标记集合 */
+    private _flags: number;
+
+    /** 初始化 */
+    public init(): LoopScrollList {
+        this._flags = Flag.Inited;
+
+        const scrollRect = this.owner.content.scrollRect;
         const spaceX = this.owner.spaceX;
+        const spaceY = this.owner.spaceY;
         const itemWidth = this.owner.itemRender.data.width;
-        const scrollBar = this.owner.scrollBar;
+        const itemHeight = this.owner.itemRender.data.height;
+        const scrollType = this.owner.scrollType;
 
-        if (evt.key == 'h') {
-            console.log(" scrollBar.value1:", scrollBar.value);
-
-            this.owner.addItem(this.owner.getItem(0));
-            this.owner.deleteItem(0);
-            this.owner.refresh();
-            console.log(" scrollBar.value2:", scrollBar.value);
-            scrollBar.value -= 100;
-
-        } else if (evt.key == 'p') {
-            this.setPause(!this._isPause);
+        if (scrollType != Laya.ScrollType.Horizontal && scrollType != Laya.ScrollType.Vertical) {
+            throw new Error("使用此组件时, 列表必须是水平或垂直滚动类型");
         }
 
+        // 计算出可视区域能容纳的项数（不超过总项数）
+        if (scrollType === Laya.ScrollType.Horizontal) {
+            this._extraNum = Math.min((scrollRect.width / (itemWidth + spaceX) + 1) | 0, this.owner.array.length);
+        } else {
+            this._extraNum = Math.min((scrollRect.height / (itemHeight + spaceY) + 1) | 0, this.owner.array.length);
+        }
+
+        // 列表的末尾加入额外项
+        for (let i = 0; i < this._extraNum; i++) this.owner.array.push(this.owner.array[i]);
+
+        // 必须设置repeatX、repeatY为列表的数据总个数，否则循环滚动设置 scrollBar.value 回开头或末尾第重复项时，会抖动
+        if (scrollType === Laya.ScrollType.Horizontal) {
+            this.owner.repeatX = this.owner.array.length;
+        } else {
+            this.owner.repeatY = this.owner.array.length;
+        }
+
+        console.log(`循环列表共${this.owner.array.length}项, 其中${this._extraNum}个额外重复项`);
+
+        // 刷新列表
+        this.owner.refresh();
+        return this;
     }
 
     public onUpdate(): void {
-        // if (this._isPause) return;
-
-        const list = this.owner;
+        if (this._flags & Flag.Pauseing) return;
+        if (!(this._flags & Flag.Scrolling)) return;
 
         const scrollBar = this.owner.scrollBar;
+        const spaceX = this.owner.spaceX;
+        const spaceY = this.owner.spaceY;
+        const itemWidth = this.owner.itemRender.data.width;
+        const itemHeight = this.owner.itemRender.data.height;
+        const scrollType = this.owner.scrollType;
 
-        scrollBar.value += 1
+        // 启动速度
+        this._speedTargetT = Math.min(this._speedTargetT + this.startupAccelerationT, 1);
+        this._speed = Laya.MathUtil.lerp(this.minSpeed * Math.sign(this._speedTargetT), this.speedTarget, this._speedTargetT);
 
-        // console.log(scrollBar.value);
+        // 速度<像素/秒>
+        let speedPs = this._speed * Laya.timer.delta * 0.001;
 
+        // 下一个 scrollBar.value
+        const nextScrollBarValue = scrollBar.value + speedPs;
 
+        if (speedPs > 0) { // 向左滚动
+            if (nextScrollBarValue > scrollBar.max) { // 向左滚动，到尽头
+                if (scrollType === Laya.ScrollType.Horizontal) {
+                    scrollBar.value = nextScrollBarValue - (spaceX + itemWidth) * (this.owner.array.length - this._extraNum);
+                } else {
+                    scrollBar.value = nextScrollBarValue - (spaceY + itemHeight) * (this.owner.array.length - this._extraNum);
+                }
+            }
+        } else if (speedPs < 0) { // 向右滚动
+            if (nextScrollBarValue < scrollBar.min) { // 向右滚动，到尽头
+                this.owner.scrollTo(this.owner.array.length - this._extraNum);
+                scrollBar.value -= nextScrollBarValue; // 滚动超出的值
+            }
+        }
 
+        // 滚动
+        scrollBar.value += speedPs;
     }
+
 
     /**
      * 开始滚动
-     * @param speedTarget 目标速度<像素/秒> (启动时逐渐加速到达的目标速度)
+     * @param speedTarget 目标速度<像素/秒> (启动时逐渐加速到达的目标速度). * 注意：大于0，列表向左滚动，小于0，列表向右滚动
      * @param starAccelerationT 启动加速度系数，范围[0,1]
      */
-    public startScroll(speedTarget: number, startupAccelerationT: number = 0.1): void {
+    public startScroll(speedTarget: number, startupAccelerationT: number = 0.1): LoopScrollList {
+        if ((this._flags & Flag.Inited) === 0) throw new Error(`还未初始化, 不能开始滚动`);
+
+        if (this._flags & Flag.Scrolling) return;
+        this._flags |= Flag.Scrolling;
+
+        this.speedTarget = speedTarget;
+        this.startupAccelerationT = startupAccelerationT;
+
+        // 向右滚动时，立即移动到末尾，重复项的第一项处
+        if (this.speedTarget < 0) {
+            this.owner.scrollTo(this.owner.array.length - this._extraNum);
+        }
 
         // 取消暂停
         this.setPause(false);
-
+        return this;
     }
 
-    /** 设置结果 */
-    public setResult(): void {
+    /** 设置结果(列表将停止在结果处) */
+    public setResult(index:number): void {
 
     }
 
     /** 设置暂停 */
     public setPause(value: boolean): void {
-        this._isPause = value;
+        if (value) this._flags |= Flag.Pauseing;
+        else this._flags &= ~Flag.Pauseing;
+    }
+
+    /** 停止 */
+    public stop(): void {
+
+    }
+
+    public onDestroy(): void {
+
     }
 
 

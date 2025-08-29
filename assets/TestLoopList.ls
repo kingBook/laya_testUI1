@@ -15,6 +15,9 @@
       "scriptPath": "../src/TestLoopList.ts",
       "hList": {
         "_$ref": "6kxe8xbj"
+      },
+      "vList": {
+        "_$ref": "pnlinnwv"
       }
     }
   ],
@@ -35,6 +38,7 @@
       },
       "repeatX": 3,
       "repeatY": 1,
+      "spaceX": 20,
       "scrollType": 1,
       "_$comp": [
         {
@@ -53,6 +57,61 @@
           "_$child": [
             {
               "_$id": "0qhcd7d8",
+              "_$type": "Label",
+              "name": "Label",
+              "x": 35,
+              "y": 20,
+              "width": 30,
+              "height": 61,
+              "centerX": 0,
+              "centerY": 0,
+              "text": "0",
+              "fontSize": 60,
+              "color": "#ffffff",
+              "fitContent": "yes",
+              "align": "center",
+              "valign": "middle"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "_$id": "pnlinnwv",
+      "_$type": "List",
+      "name": "vList",
+      "x": 512,
+      "y": 161,
+      "width": 100,
+      "height": 300,
+      "right": 28,
+      "top": 161,
+      "bgColor": "#ffffff",
+      "itemTemplate": {
+        "_$ref": "ys3px1a8",
+        "_$tmpl": "itemRender"
+      },
+      "repeatX": 1,
+      "repeatY": 3,
+      "spaceY": 20,
+      "scrollType": 2,
+      "_$comp": [
+        {
+          "_$type": "009ea4b0-93c3-4296-b55f-b1428d72bcf7",
+          "scriptPath": "../src/kingBook/comps/LoopScrollList.ts"
+        }
+      ],
+      "_$child": [
+        {
+          "_$id": "ys3px1a8",
+          "_$type": "Box",
+          "name": "item",
+          "width": 100,
+          "height": 100,
+          "bgColor": "#26394e",
+          "_$child": [
+            {
+              "_$id": "8c3fbu85",
               "_$type": "Label",
               "name": "Label",
               "x": 35,

@@ -24,23 +24,35 @@ export class LoopScrollList extends Laya.Script {
 
 
     /** 速度<像素/秒> */
-    private _speed: number = 0;
+    private _speed: number;
     /** 目标速度的插值，区间为：[0,1] */
-    private _speedTargetT: number = 0;
+    private _speedTargetT: number;
 
     /** 启动后，逐渐加速最终到达的目标速度<像素/秒> */
-    public speedTarget: number = 0;
+    public speedTarget: number;
     /** 启动加速度系数， 区间为：[0,1] */
     public startupAccelerationT: number = 0.1;
     /** 最小速度<像素/秒, 正数> */
     public minSpeed: number = 0.1;
+    /** 设置结果后的减速摩擦系数 */
+    public frictionOnResult: number = 0.987;
+
+    /** 聚焦点, 值范围:[0,1] */
+    public focus: { x: number, y: number } = { x: 0.5, y: 0.5 };
 
     /** 布尔标记集合 */
     private _flags: number;
+    /** 结果索引 */
+    private _resultIndex: number;
 
     /** 初始化 */
     public init(): LoopScrollList {
         this._flags = Flag.Inited;
+
+        this._speed = 0;
+        this._speedTargetT = 0;
+        this.speedTarget = 0;
+        this._resultIndex = NaN;
 
         const scrollRect = this.owner.content.scrollRect;
         const spaceX = this.owner.spaceX;
@@ -88,9 +100,20 @@ export class LoopScrollList extends Laya.Script {
         const itemHeight = this.owner.itemRender.data.height;
         const scrollType = this.owner.scrollType;
 
-        // 启动速度
-        this._speedTargetT = Math.min(this._speedTargetT + this.startupAccelerationT, 1);
-        this._speed = Laya.MathUtil.lerp(this.minSpeed * Math.sign(this._speedTargetT), this.speedTarget, this._speedTargetT);
+
+        if (!isNaN(this._resultIndex)) { // 设置了结果
+            //this._speed = Math.max(this.frictionOnResult * Math.abs(this._speed), this.minSpeed) * Math.sign(this._speed);
+            this._speed *= this.frictionOnResult;
+            
+        } else {
+            // 启动速度
+            if (this._speedTargetT < 1) {
+                this._speedTargetT = Math.min(this._speedTargetT + this.startupAccelerationT, 1);
+                this._speed = Laya.MathUtil.lerp(this.minSpeed * Math.sign(this.speedTarget), this.speedTarget, this._speedTargetT);
+            }
+        }
+        console.log("speed:", this._speed);
+
 
         // 速度<像素/秒>
         let speedPs = this._speed * Laya.timer.delta * 0.001;
@@ -129,6 +152,10 @@ export class LoopScrollList extends Laya.Script {
         if (this._flags & Flag.Scrolling) return;
         this._flags |= Flag.Scrolling;
 
+        this._speed = 0;
+        this._speedTargetT = 0;
+        this._resultIndex = NaN;
+
         this.speedTarget = speedTarget;
         this.startupAccelerationT = startupAccelerationT;
 
@@ -143,8 +170,14 @@ export class LoopScrollList extends Laya.Script {
     }
 
     /** 设置结果(列表将停止在结果处) */
-    public setResult(index:number): void {
+    public setResult(index: number): void {
+        if ((this._flags & Flag.Inited) === 0) throw new Error(`还未初始化, 不能设置结果`);
+        if ((this._flags & Flag.Scrolling) === 0) throw new Error(`未开始滚动，不能设置结果`);
 
+        const inRange = index >= 0 && index < this.owner.array.length - this._extraNum;
+        if (!inRange) throw new Error("设置的结果超出范围");
+
+        this._resultIndex = index;
     }
 
     /** 设置暂停 */

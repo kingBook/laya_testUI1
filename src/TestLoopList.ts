@@ -17,7 +17,7 @@ export class TestLoopList extends Laya.Script {
         const hListData = [];
         for (let i = 0; i < 5; i++)hListData.push({ Label: `${i}` });
         this.hList.array = hListData;
-        this.hList.getComponent(LoopScrollList).init().startScroll(-300, 0.01);
+        this.hList.getComponent(LoopScrollList).init().startScroll(300, 0.01);
 
         // 垂直滚动
         /*const vListData = [];

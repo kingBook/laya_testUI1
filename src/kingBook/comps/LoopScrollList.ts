@@ -37,13 +37,12 @@ export class LoopScrollList extends Laya.Script {
     /** 设置结果后的减速摩擦系数 */
     public frictionOnResult: number = 0.987;
 
-    /** 聚焦点, 值范围:[0,1] */
-    public focus: { x: number, y: number } = { x: 0.5, y: 0.5 };
-
     /** 布尔标记集合 */
     private _flags: number;
-    /** 结果索引 */
-    private _resultIndex: number;
+    /** 符合结果的索引（因为列表末尾有一些项是重复的，所以符合结果的项可能会有两个, 最多只会有两个， [0]:原索引, [1]:重复索引） */
+    private _resultIndices: number[];
+    /** 聚集点，范围：[0,1] */
+    private readonly _focus = { x: 0.5, y: 0.5 };
 
     /** 初始化 */
     public init(): LoopScrollList {
@@ -52,7 +51,8 @@ export class LoopScrollList extends Laya.Script {
         this._speed = 0;
         this._speedTargetT = 0;
         this.speedTarget = 0;
-        this._resultIndex = NaN;
+        this._resultIndices ||= [];
+        this._resultIndices.length = 0;
 
         const scrollRect = this.owner.content.scrollRect;
         const spaceX = this.owner.spaceX;
@@ -99,12 +99,25 @@ export class LoopScrollList extends Laya.Script {
         const itemWidth = this.owner.itemRender.data.width;
         const itemHeight = this.owner.itemRender.data.height;
         const scrollType = this.owner.scrollType;
+        const scrollRect = this.owner.content.scrollRect;
+        const deltaTime = Laya.timer.delta / 1000;
 
 
-        if (!isNaN(this._resultIndex)) { // 设置了结果
+        if (this._resultIndices.length > 0) { // 设置了结果
             //this._speed = Math.max(this.frictionOnResult * Math.abs(this._speed), this.minSpeed) * Math.sign(this._speed);
-            this._speed *= this.frictionOnResult;
-            
+            //this._speed *= this.frictionOnResult;
+            this._speed = 0;
+
+            const focusX = scrollRect.width * this._focus.x;
+            const focusY = scrollRect.height * this._focus.y;
+
+
+            //console.log("focusX:", focusX, scrollBar.value, this.owner);
+            if (this._speed > 0) { // 向左滚动
+
+            } else if (this._speed < 0) { // 向右滚动
+                
+            }
         } else {
             // 启动速度
             if (this._speedTargetT < 1) {
@@ -112,11 +125,9 @@ export class LoopScrollList extends Laya.Script {
                 this._speed = Laya.MathUtil.lerp(this.minSpeed * Math.sign(this.speedTarget), this.speedTarget, this._speedTargetT);
             }
         }
-        console.log("speed:", this._speed);
-
 
         // 速度<像素/秒>
-        let speedPs = this._speed * Laya.timer.delta * 0.001;
+        const speedPs = this._speed * deltaTime;
 
         // 下一个 scrollBar.value
         const nextScrollBarValue = scrollBar.value + speedPs;
@@ -154,7 +165,7 @@ export class LoopScrollList extends Laya.Script {
 
         this._speed = 0;
         this._speedTargetT = 0;
-        this._resultIndex = NaN;
+        this._resultIndices.length = 0;
 
         this.speedTarget = speedTarget;
         this.startupAccelerationT = startupAccelerationT;
@@ -177,7 +188,13 @@ export class LoopScrollList extends Laya.Script {
         const inRange = index >= 0 && index < this.owner.array.length - this._extraNum;
         if (!inRange) throw new Error("设置的结果超出范围");
 
-        this._resultIndex = index;
+        // 符合结果的索引
+        this._resultIndices[0] = index;
+        if (this._extraNum > 0 && index < this._extraNum) {
+            // 重复项中，符合结果的索引
+            this._resultIndices[1] = this.owner.array.length - this._extraNum + index;
+        }
+        console.log(`设置结果，符合结果的索引有：${this._resultIndices[0]}, ${this._resultIndices.length > 1 ? this._resultIndices[1] : '-'}`);
     }
 
     /** 设置暂停 */

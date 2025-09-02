@@ -12,6 +12,19 @@ enum LoopScrollListFlag {
     TweeningToResult = 8
 }
 
+interface TweeningData {
+    /** 缓动到的结果索引 */
+    resultIndex: number;
+    /** 缓动到结果开始时焦点下的索引 */
+    startFocusedIndex: number;
+    /** 缓动到结果时的速度长度 */
+    speedAbs: number;
+    /** 缓动到结果时的速度符号 */
+    speedSign: number;
+    /** 缓动到结果开始时滚动条的值 */
+    startScrollBarValue: number;
+}
+
 /**
  * 循环滚动列表
  */
@@ -102,10 +115,8 @@ export class LoopScrollList extends Laya.Script {
         const deltaTime = Laya.timer.delta / 1000;
         const itemCount = this.owner.array.length;
 
-        let tweeningToResultIndex: number; // 缓动到的目标索引
-        let tweeningToResultSpeedAbs: number; // 缓动到结果时的速度长度
-        let tweeningToResultSpeedSign: number; // 缓动到结果时的速度符号
-        let tweeningToResultStartScrollBarValue: number; // 缓动到结果开始时滚动条的值
+        // 缓动时的数据
+        let tweeningData: TweeningData;
 
         // 启动速度
         if (this._targetSpeedT < 1) {
@@ -126,10 +137,13 @@ export class LoopScrollList extends Laya.Script {
                     // 焦点下的索引等于下一个索引
                     if (isFocusIndexEqualToNextIndex) {
                         this._flags |= LoopScrollListFlag.TweeningToResult;
-                        tweeningToResultIndex = this.getTweenToResultIndex(focusedIndex, speedSign);
-                        tweeningToResultSpeedAbs = Math.abs(this._speed);
-                        tweeningToResultSpeedSign = speedSign;
-                        tweeningToResultStartScrollBarValue = scrollBar.value;
+                        tweeningData = {
+                            resultIndex: this.getTweenToResultIndex(focusedIndex, speedSign),
+                            startFocusedIndex: focusedIndex,
+                            speedAbs: Math.abs(this._speed),
+                            speedSign: speedSign,
+                            startScrollBarValue: scrollBar.value
+                        };
                         console.log(`开始缓动到结果索引`, scrollBar.value);
                     }
                 } else if (this._speed < 0) { // 列表向右滚动
@@ -137,10 +151,13 @@ export class LoopScrollList extends Laya.Script {
                     // 焦点下的索引等于下一个索引
                     if (isFocusIndexEqualToNextIndex) {
                         this._flags |= LoopScrollListFlag.TweeningToResult;
-                        tweeningToResultIndex = this.getTweenToResultIndex(focusedIndex, speedSign);
-                        tweeningToResultSpeedAbs = Math.abs(this._speed);
-                        tweeningToResultSpeedSign = speedSign;
-                        tweeningToResultStartScrollBarValue = scrollBar.value;
+                        tweeningData = {
+                            resultIndex: this.getTweenToResultIndex(focusedIndex, speedSign),
+                            startFocusedIndex: focusedIndex,
+                            speedAbs: Math.abs(this._speed),
+                            speedSign: speedSign,
+                            startScrollBarValue: scrollBar.value
+                        };
                         console.log(`开始缓动到结果索引`, scrollBar.value);
                     }
                 }
@@ -149,25 +166,23 @@ export class LoopScrollList extends Laya.Script {
 
         // 正在缓动到结果索引
         if (this._flags & LoopScrollListFlag.TweeningToResult) {
-            this._speed = 0;
-            const speedSign = Math.sign(this._speed);
             console.log("scrollBar.value:", scrollBar.value);
 
-            if (this._speed > 0) { // 列表向左滚动
-                const t = this.getTweenTargetT(tweeningToResultIndex, tweeningToResultStartScrollBarValue, scrollBar.value, speedSign);
+            if (tweeningData.speedSign > 0) { // 列表向左滚动
+                const t = this.getTweenTargetT(tweeningData, scrollBar.value);
                 console.log(`正在缓动到结果索引, t:${t}`);
                 if (t >= 0) {
                     this._speed = 0;
                 } else {
-                    this._speed = Laya.MathUtil.lerp(tweeningToResultSpeedAbs, this.minSpeed, t) * tweeningToResultSpeedSign;
+                    this._speed = Laya.MathUtil.lerp(tweeningData.speedAbs, this.minSpeed, t) * tweeningData.speedSign;
                 }
-            } else if (this._speed < 0) { // 列表向右滚动
-                const t = this.getTweenTargetT(tweeningToResultIndex, tweeningToResultStartScrollBarValue, scrollBar.value, speedSign);
+            } else if (tweeningData.speedSign < 0) { // 列表向右滚动
+                const t = this.getTweenTargetT(tweeningData, scrollBar.value);
                 console.log(`正在缓动到结果索引, t:${t}`);
                 if (t >= 0) {
                     this._speed = 0;
                 } else {
-                    this._speed = Laya.MathUtil.lerp(tweeningToResultSpeedAbs, this.minSpeed, t) * tweeningToResultSpeedSign;
+                    this._speed = Laya.MathUtil.lerp(tweeningData.speedAbs, this.minSpeed, t) * tweeningData.speedSign;
                 }
             }
         }
@@ -347,15 +362,15 @@ export class LoopScrollList extends Laya.Script {
 
     /**
      * 获取缓动到目标索引的插值
-     * @param tweenTargetIndex 缓动到的目标索引
-     * @param tweeningStartScrollBarValue 缓动开始时滚动条的值
+     * @param tweeningData 缓动时的数据
      * @param scrollBarValue 滚动条i当前的值
-     * @param speedSign 速度符号，1或-1
      */
-    private getTweenTargetT(tweenTargetIndex: number, tweeningStartScrollBarValue: number, scrollBarValue: number, speedSign: number): number {
+    private getTweenTargetT(tweeningData: TweeningData, scrollBarValue: number): number {
         let t: number = 0;
-        if (speedSign > 0) { // 列表向左滚动
-
+        if (tweeningData.speedSign > 0) { // 列表向左滚动
+            if(tweeningData.resultIndex>tweeningData.startFocusedIndex){
+                //targetScrollBarValue - tweeningData.startScrollBarValue
+            }
         } else { // 列表向右滚动
 
         }

@@ -139,7 +139,7 @@ export class LoopScrollList extends Laya.Script {
             // 设置了结果
             if (this._resultIndices.length > 0) {
                 // 焦点下的索引
-                const focusedIndex = this.getIndexByScrollBarValue(nextScrollBarValue, true);
+                const focusedIndex = this.getIndexByScrollBarValue(scrollBar.value, true);
                 console.log("focusedIndex:", focusedIndex);
 
                 const speedSign = Math.sign(this._speed);
@@ -151,7 +151,7 @@ export class LoopScrollList extends Laya.Script {
                         this._flags |= LoopScrollListFlag.TweeningToResult;
                         //const resultIndex = this.getTweenToResultIndex(focusedIndex, speedSign);
                         //console.log("resultIndex", resultIndex, "focusedIndex", focusedIndex);
-                        this.getDistanceToResult(speedSign, nextScrollBarValue);
+                        this.getDistanceToResult(speedSign, scrollBar.value);
 
 
                         /*if (focusedIndex === resultIndex) throw new Error(`焦点下的项不能等于结果项, focusedIndex:${focusedIndex}, resultIndex:${resultIndex}`);
@@ -395,16 +395,39 @@ export class LoopScrollList extends Laya.Script {
     /**
      * 根据速度方向、当前滚动条值获取到结果的距离
      */
-    private getDistanceToResult(speedSign: number, nextScrollBarValue: number): number {
+    private getDistanceToResult(speedSign: number, scrollBarValue: number): number {
+        const scrollBar = this.owner.scrollBar;
         const itemCount = this.owner.array.length;
-        let i = this.getIndexByScrollBarValue(nextScrollBarValue, true);
+        const spaceX = this.owner.spaceX;
+        const spaceY = this.owner.spaceY;
+        const itemWidth = this.owner.itemRender.data.width;
+        const itemHeight = this.owner.itemRender.data.height;
+        const scrollType = this.owner.scrollType;
+
+        let i = this.getIndexByScrollBarValue(scrollBarValue, true);
         //this._resultIndices.find(item => focusedIndex === this.getNextItemIndex(item, speedSign)) !== undefined;
         let c = 0;
+        let deltaScrollBarValue = 0;
         while (true) {
             if (speedSign > 0) {
                 i = (i + 1) % itemCount;
             } else {
                 i = (i - 1 + itemCount) % itemCount;
+            }
+
+            if (scrollType === Laya.ScrollType.Horizontal) {
+                deltaScrollBarValue = c * (itemWidth + spaceX);
+                if (speedSign > 0) {
+                    if (scrollBarValue + deltaScrollBarValue > scrollBar.max) {
+                        
+                    }
+                } else {
+                }
+            } else {
+                deltaScrollBarValue = c * (itemHeight + spaceY);
+                if (speedSign > 0) {
+                } else {
+                }
             }
             c++;
             if (this._resultIndices.indexOf(i) > -1) break;

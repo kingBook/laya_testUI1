@@ -12,7 +12,7 @@ enum LoopScrollListFlag {
     TweeningToResult = 8
 }
 
-interface TweeningData {
+interface ITweeningData {
     /** 缓动到的结果索引 */
     resultIndex: number;
     /** 缓动到结果开始时焦点下的索引 */
@@ -23,6 +23,10 @@ interface TweeningData {
     speedSign: number;
     /** 缓动到结果开始时滚动条的值 */
     startScrollBarValue: number;
+    /** 结果项滚动条值 */
+    resultScrollBarValue: number;
+    /** 虚拟的结果项滚动条值（此值并不一定是滚动条真实的值，主要用于和startScrollBarValue计算出到达结果项的插值）*/
+    virtualResultScrollBarValue: number;
 }
 
 /**
@@ -39,8 +43,8 @@ export class LoopScrollList extends Laya.Script {
     public startupAccelT: number = 0.1;
     /** 最小速度<像素/秒, 正数> */
     public minSpeed: number = 0.1;
-    /** 设置结果后的减速摩擦系数 */
-    public resultFriction: number = 0.987;
+    ///** 设置结果后的减速摩擦系数 */
+    //public resultFriction: number = 0.987;
 
     /** 额外添加的重复列表项数量 */
     private _extraItemNum: number;
@@ -52,6 +56,8 @@ export class LoopScrollList extends Laya.Script {
     private _flags: number;
     /** 符合结果的索引（因为列表末尾有一些项是重复的，所以符合结果的项可能会有两个, 最多只会有两个, 有可能只有一个，且[1]的值一定比[0]的值大， [0]:原索引, [1]:重复索引） */
     private _resultItemIndices: number[];
+    // 缓动时的数据
+    private _tweeningData: ITweeningData;
     /** 聚集点，范围：[0,1] */
     private readonly _focusPoint = { x: 0.5, y: 0.5 };
 
@@ -112,17 +118,21 @@ export class LoopScrollList extends Laya.Script {
         const scrollType = this.owner.scrollType;
         const scrollRect = this.owner.content.scrollRect;
 
-        const deltaTime = Laya.timer.delta / 1000;
+        const deltaTime = Laya.timer.delta / 1000; // 秒
         const itemCount = this.owner.array.length;
 
-        // 缓动时的数据
-        let tweeningData: TweeningData;
+
 
         // 启动速度
         if (this._targetSpeedT < 1) {
             this._targetSpeedT = Math.min(this._targetSpeedT + this.startupAccelT, 1);
             this._speed = Laya.MathUtil.lerp(this.minSpeed * Math.sign(this.targetSpeed), this.targetSpeed, this._targetSpeedT);
         }
+
+        // 速度<像素/秒>
+        let speedPs = this._speed * deltaTime;
+        // 下一个 scrollBar.value
+        const nextScrollBarValue = scrollBar.value + speedPs;
 
         // 未在缓动到结果索引
         if ((this._flags & LoopScrollListFlag.TweeningToResult) === 0) {
@@ -137,61 +147,72 @@ export class LoopScrollList extends Laya.Script {
                     // 焦点下的索引等于下一个索引
                     if (isFocusIndexEqualToNextIndex) {
                         this._flags |= LoopScrollListFlag.TweeningToResult;
-                        tweeningData = {
-                            resultIndex: this.getTweenToResultIndex(focusedIndex, speedSign),
+                        const resultIndex = this.getTweenToResultIndex(focusedIndex, speedSign);
+                        console.log("resultIndex", resultIndex, "focusedIndex", focusedIndex);
+
+                        /*if (focusedIndex === resultIndex) throw new Error(`焦点下的项不能等于结果项, focusedIndex:${focusedIndex}, resultIndex:${resultIndex}`);
+                        this._tweeningData = {
+                            resultIndex: resultIndex,
                             startFocusedIndex: focusedIndex,
                             speedAbs: Math.abs(this._speed),
                             speedSign: speedSign,
-                            startScrollBarValue: scrollBar.value
+                            startScrollBarValue: scrollBar.value,
+                            resultScrollBarValue: this.getScrollBarValueByIndex(resultIndex, true),
+                            virtualResultScrollBarValue: this.getVirtualResultScrollBarValue(focusedIndex, resultIndex, scrollBar.value, speedSign)
                         };
-                        console.log(`开始缓动到结果索引`, scrollBar.value);
+                        console.log(`开始缓动到结果索引`, scrollBar.value);*/
                     }
                 } else if (this._speed < 0) { // 列表向右滚动
-                    const isFocusIndexEqualToNextIndex = this._resultItemIndices.find(item => focusedIndex === this.getNextItemIndex(item, speedSign)) !== undefined;
+                    /*const isFocusIndexEqualToNextIndex = this._resultItemIndices.find(item => focusedIndex === this.getNextItemIndex(item, speedSign)) !== undefined;
                     // 焦点下的索引等于下一个索引
                     if (isFocusIndexEqualToNextIndex) {
                         this._flags |= LoopScrollListFlag.TweeningToResult;
-                        tweeningData = {
-                            resultIndex: this.getTweenToResultIndex(focusedIndex, speedSign),
+                        const resultIndex = this.getTweenToResultIndex(focusedIndex, speedSign);
+                        if (focusedIndex === resultIndex) throw new Error(`焦点下的项不能等于结果项, focusedIndex:${focusedIndex}, resultIndex:${resultIndex}`);
+                        this._tweeningData = {
+                            resultIndex: resultIndex,
                             startFocusedIndex: focusedIndex,
                             speedAbs: Math.abs(this._speed),
                             speedSign: speedSign,
-                            startScrollBarValue: scrollBar.value
+                            startScrollBarValue: scrollBar.value,
+                            resultScrollBarValue: this.getScrollBarValueByIndex(resultIndex, true),
+                            virtualResultScrollBarValue: this.getVirtualResultScrollBarValue(focusedIndex, resultIndex, scrollBar.value, speedSign)
                         };
                         console.log(`开始缓动到结果索引`, scrollBar.value);
-                    }
+                    }*/
                 }
             }
         }
 
         // 正在缓动到结果索引
         if (this._flags & LoopScrollListFlag.TweeningToResult) {
+            //test
+            this._speed = 0;
+            speedPs = 0;
             console.log("scrollBar.value:", scrollBar.value);
 
-            if (tweeningData.speedSign > 0) { // 列表向左滚动
-                const t = this.getTweenTargetT(tweeningData, scrollBar.value);
+            /*if (this._tweeningData.speedSign > 0) { // 列表向左滚动
+                const t = this.getTweenTargetT(this._tweeningData, scrollBar.value);
                 console.log(`正在缓动到结果索引, t:${t}`);
                 if (t >= 0) {
                     this._speed = 0;
+                    speedPs = 0;
+                    scrollBar.value = this._tweeningData.resultScrollBarValue;
                 } else {
-                    this._speed = Laya.MathUtil.lerp(tweeningData.speedAbs, this.minSpeed, t) * tweeningData.speedSign;
+                    this._speed = Laya.MathUtil.lerp(this._tweeningData.speedAbs, this.minSpeed, t) * this._tweeningData.speedSign;
                 }
-            } else if (tweeningData.speedSign < 0) { // 列表向右滚动
-                const t = this.getTweenTargetT(tweeningData, scrollBar.value);
+            } else if (this._tweeningData.speedSign < 0) { // 列表向右滚动
+                const t = this.getTweenTargetT(this._tweeningData, scrollBar.value);
                 console.log(`正在缓动到结果索引, t:${t}`);
                 if (t >= 0) {
                     this._speed = 0;
+                    speedPs = 0;
+                    scrollBar.value = this._tweeningData.resultScrollBarValue;
                 } else {
-                    this._speed = Laya.MathUtil.lerp(tweeningData.speedAbs, this.minSpeed, t) * tweeningData.speedSign;
+                    this._speed = Laya.MathUtil.lerp(this._tweeningData.speedAbs, this.minSpeed, t) * this._tweeningData.speedSign;
                 }
-            }
+            }*/
         }
-
-        // 速度<像素/秒>
-        const speedPs = this._speed * deltaTime;
-
-        // 下一个 scrollBar.value
-        const nextScrollBarValue = scrollBar.value + speedPs;
 
         if (speedPs > 0) { // 列表向左滚动
             if (nextScrollBarValue > scrollBar.max) { // 列表向左滚动，到尽头
@@ -300,10 +321,10 @@ export class LoopScrollList extends Laya.Script {
 
         for (i = 0; i < itemCount; i++) {
             if (scrollType === Laya.ScrollType.Horizontal) {
-                min = i * itemWidth + i * spaceX - focusX;
+                min = i * (itemWidth + spaceX) - focusX;
                 max = min + itemWidth;
             } else {
-                min = i * itemHeight + i * spaceY - focusY;
+                min = i * (itemHeight + spaceY) - focusY;
                 max = min + itemHeight;
             }
             if (scrollBarValue >= min && scrollBarValue <= max) {
@@ -339,6 +360,90 @@ export class LoopScrollList extends Laya.Script {
     }
 
     /**
+     * 获取指定列表项滚动条的值
+     * @param i 列表项索引
+     * @param isCenter 是否取列表项中间的滚动条值，默认为 false, 取列表项左或顶的滚动条值
+     */
+    private getScrollBarValueByIndex(i: number, isCenter: boolean = false): number {
+        const itemCount = this.owner.array.length;
+        if (i < 0 || i > itemCount - 1) throw new Error(`索引超出范围, i:${i}, itemCount:${itemCount}`);
+        const spaceX = this.owner.spaceX;
+        const spaceY = this.owner.spaceY;
+        const itemWidth = this.owner.itemRender.data.width;
+        const itemHeight = this.owner.itemRender.data.height;
+        const scrollType = this.owner.scrollType;
+
+        let val = NaN;
+        if (scrollType === Laya.ScrollType.Horizontal) {
+            val = i * (itemWidth + spaceX);
+            if (isCenter) val += itemWidth / 2;
+        } else {
+            val = i * (itemHeight + spaceY);
+            if (isCenter) val += itemHeight / 2;
+        }
+        return val;
+    }
+
+    /**
+     * 虚拟的结果项滚动条值（此值并不一定是滚动条真实的值，主要用于和startScrollBarValue计算出到达结果项的插值, 
+     * speedSign 大于 0 时： 返回的值一定大于 scrollBarValue； 
+     * speedSign 小于 0 时： 返回的值一定小于 scrollBarValue）
+     */
+    private getVirtualResultScrollBarValue(focusedIndex: number, resultIndex: number, scrollBarValue: number, speedSign: number): number {
+        const itemCount = this.owner.array.length;
+        const scrollBar = this.owner.scrollBar;
+        let val = NaN;
+        if (speedSign > 0) { // 列表向左滚动
+            if (resultIndex > focusedIndex) {
+                val = this.getScrollBarValueByIndex(resultIndex, true);
+            } else if (resultIndex < focusedIndex) {
+                val = scrollBar.max + this.getScrollBarValueByIndex(resultIndex, true);
+            }
+        } else { // 列表向右滚动
+            if (resultIndex < focusedIndex) {
+                val = this.getScrollBarValueByIndex(resultIndex, true);
+            } else {
+                val = 0 - (scrollBar.max - this.getScrollBarValueByIndex(resultIndex, true));
+            }
+        }
+        if (isNaN(val)) throw new Error(`获取结果项滚动条值失败, focusedIndex:${focusedIndex}, resultIndex:${resultIndex}, scrollBarValue:${scrollBarValue}, speedSign:${speedSign}`);
+        return val;
+    }
+
+
+    /*private getVirtualScrollBarValue(scrollBarValue: number): number {
+
+    }*/
+
+    /**
+     * 指定列表项能否被滚动到焦点
+     * @param index list.array 中的索引
+     */
+    private canScrollToFocus(index: number): boolean {
+        const scrollBar = this.owner.scrollBar;
+        const spaceX = this.owner.spaceX;
+        const spaceY = this.owner.spaceY;
+        const itemWidth = this.owner.itemRender.data.width;
+        const itemHeight = this.owner.itemRender.data.height;
+        const scrollType = this.owner.scrollType;
+        const scrollRect = this.owner.content.scrollRect;
+
+        const scrollBarValue = scrollBar.value;
+        const focusX = scrollRect.width * this._focusPoint.x;
+        const focusY = scrollRect.height * this._focusPoint.y;
+        const itemCount = this.owner.array.length;
+
+        const itemScrollBarValue = this.getScrollBarValueByIndex(index, true);
+        let ret=false;
+        if (scrollType === Laya.ScrollType.Horizontal) {
+            
+        } else {
+
+        }
+        return ret;
+    }
+
+    /**
      * 获取缓动到的结果索引
      * @param focusedIndex 焦点下的索引
      * @param speedSign 速度符号，1或-1
@@ -348,6 +453,8 @@ export class LoopScrollList extends Laya.Script {
         if (this._resultItemIndices.length > 1) {
             const i0 = this._resultItemIndices[0];
             const i1 = this._resultItemIndices[1];
+            console.log("i0", i0, "i1", i1, "focusedIndex", focusedIndex, "speedSign", speedSign);
+
             if (speedSign > 0) { // 列表向左滚动
                 ret = i1 >= focusedIndex ? i1 : i0;
             } else { // 列表向右滚动
@@ -357,7 +464,7 @@ export class LoopScrollList extends Laya.Script {
             ret = this._resultItemIndices[0];
         }
         if (ret === -1) throw new Error(`无法找到缓动的目标索引, focusedIndex:${focusedIndex}, speedSign:${speedSign}`);
-        return -1;
+        return ret;
     }
 
     /**
@@ -365,11 +472,27 @@ export class LoopScrollList extends Laya.Script {
      * @param tweeningData 缓动时的数据
      * @param scrollBarValue 滚动条i当前的值
      */
-    private getTweenTargetT(tweeningData: TweeningData, scrollBarValue: number): number {
+    private getTweenTargetT(tweeningData: ITweeningData, scrollBarValue: number): number {
+        const scrollBar = this.owner.scrollBar;
+        const scrollRect = this.owner.content.scrollRect;
+        const scrollType = this.owner.scrollType;
+
         let t: number = 0;
         if (tweeningData.speedSign > 0) { // 列表向左滚动
-            if(tweeningData.resultIndex>tweeningData.startFocusedIndex){
-                //targetScrollBarValue - tweeningData.startScrollBarValue
+            if (tweeningData.resultIndex > tweeningData.startFocusedIndex) { //左焦点项，右结果项
+
+                const canReachedScrollToEnd = scrollType === Laya.ScrollType.Horizontal
+                    ? (scrollBar.max - tweeningData.resultScrollBarValue) > (scrollRect.width * (1 - this._focusPoint.x))
+                    : (scrollBar.max - tweeningData.resultScrollBarValue) > (scrollRect.height * (1 - this._focusPoint.y));
+
+                if (canReachedScrollToEnd) { // 如果滚动到末尾能到达时
+                    t = scrollBarValue / tweeningData.resultScrollBarValue;
+                } else {
+
+                }
+            } else { // 左结果项，右焦点项
+                //if(scrollBarValue>tweeningData.resultScrollBarValue)
+                //t = scrollBarValue / (scrollBar.max + tweeningData.resultScrollBarValue);
             }
         } else { // 列表向右滚动
 

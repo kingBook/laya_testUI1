@@ -148,7 +148,9 @@ export class LoopScrollList extends Laya.Script {
                     if (isFocusIndexEqualToNextIndex) {
                         this._flags |= LoopScrollListFlag.TweeningToResult;
                         const resultIndex = this.getTweenToResultIndex(focusedIndex, speedSign);
-                        console.log("resultIndex", resultIndex, "focusedIndex", focusedIndex);
+                        //console.log("resultIndex", resultIndex, "focusedIndex", focusedIndex);
+
+
 
                         /*if (focusedIndex === resultIndex) throw new Error(`焦点下的项不能等于结果项, focusedIndex:${focusedIndex}, resultIndex:${resultIndex}`);
                         this._tweeningData = {
@@ -189,7 +191,8 @@ export class LoopScrollList extends Laya.Script {
             //test
             this._speed = 0;
             speedPs = 0;
-            console.log("scrollBar.value:", scrollBar.value);
+            //console.log("scrollBar.value:", scrollBar.value);
+            //console.log(this.getIndexByScrollBarValue(scrollBar.value, true));
 
             /*if (this._tweeningData.speedSign > 0) { // 列表向左滚动
                 const t = this.getTweenTargetT(this._tweeningData, scrollBar.value);
@@ -385,6 +388,38 @@ export class LoopScrollList extends Laya.Script {
     }
 
     /**
+     * 根据滚动条值获取列表项索引
+     * @param scrollBarValue 滚动条值
+     * @param focus 如果 true ，则获取位于焦点下的索引，false 时，则列表可视区域左/上边缘的索引
+     * @returns 
+     */
+    private getIndexByScrollBarValue(scrollBarValue: number, focus: boolean): number {
+        const spaceX = this.owner.spaceX;
+        const spaceY = this.owner.spaceY;
+        const itemWidth = this.owner.itemRender.data.width;
+        const itemHeight = this.owner.itemRender.data.height;
+        const scrollType = this.owner.scrollType;
+        const scrollRect = this.owner.content.scrollRect;
+
+        const focusX = scrollRect.width * this._focusPoint.x;
+        const focusY = scrollRect.height * this._focusPoint.y;
+
+        // 水平滚动
+        if (scrollType === Laya.ScrollType.Horizontal) {
+            if (focus) {
+                scrollBarValue += focusX;
+            }
+            return Math.trunc(scrollBarValue / (itemWidth + spaceX));
+        }
+
+        // 垂直滚动
+        if (focus) {
+            scrollBarValue += focusY;
+        }
+        return Math.trunc(scrollBarValue / (itemHeight + spaceY));
+    }
+
+    /**
      * 虚拟的结果项滚动条值（此值并不一定是滚动条真实的值，主要用于和startScrollBarValue计算出到达结果项的插值, 
      * speedSign 大于 0 时： 返回的值一定大于 scrollBarValue； 
      * speedSign 小于 0 时： 返回的值一定小于 scrollBarValue）
@@ -434,9 +469,8 @@ export class LoopScrollList extends Laya.Script {
         const itemCount = this.owner.array.length;
 
         const itemScrollBarValue = this.getScrollBarValueByIndex(index, true);
-        let ret=false;
+        let ret = false;
         if (scrollType === Laya.ScrollType.Horizontal) {
-            
         } else {
 
         }

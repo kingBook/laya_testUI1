@@ -17,7 +17,7 @@ export class TestLoopList extends Laya.Script {
         const hListData = [];
         for (let i = 0; i < 5; i++)hListData.push({ Label: `${i}` });
         this.hList.array = hListData;
-        this.hList.getComponent(LoopScrollList).init().startScrolling(300, 0.01);
+        this.hList.getComponent(LoopScrollList).init().startScrolling((Math.random()>0.5?1:-1)*1000, 0.01);
 
         // 垂直滚动
         const vListData = [];
@@ -29,7 +29,10 @@ export class TestLoopList extends Laya.Script {
 
     onKeyDown(evt: Laya.Event): void {
         if (evt.key === 'h') {
-            this.hList.getComponent(LoopScrollList).setScrollResult(0);
+            const resultIndex = Math.trunc(Math.random()* 5);
+            console.log("设置结果", resultIndex);
+
+            this.hList.getComponent(LoopScrollList).setScrollResult(resultIndex);
         }
     }
 

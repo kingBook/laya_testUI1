@@ -71,6 +71,21 @@
               "fitContent": "yes",
               "align": "center",
               "valign": "middle"
+            },
+            {
+              "_$id": "xzpfvxci",
+              "_$type": "Label",
+              "name": "labelIndex",
+              "x": 45,
+              "y": 79,
+              "width": 10,
+              "height": 21,
+              "bottom": 0,
+              "centerX": 0,
+              "text": "-",
+              "fontSize": 20,
+              "color": "#ff0000",
+              "fitContent": "yes"
             }
           ]
         }
@@ -126,8 +141,44 @@
               "fitContent": "yes",
               "align": "center",
               "valign": "middle"
+            },
+            {
+              "_$id": "ltstwnr9",
+              "_$type": "Label",
+              "name": "labelIndex",
+              "x": 45,
+              "y": 79,
+              "width": 10,
+              "height": 21,
+              "bottom": 0,
+              "centerX": 0,
+              "text": "-",
+              "fontSize": 20,
+              "color": "#ff0000",
+              "fitContent": "yes"
             }
           ]
+        }
+      ]
+    },
+    {
+      "_$id": "z8qpag7f",
+      "_$type": "Sprite",
+      "name": "Sprite",
+      "x": 270,
+      "y": 22,
+      "width": 100,
+      "height": 225,
+      "_gcmds": [
+        {
+          "_$type": "DrawLineCmd",
+          "fromX": 0.5,
+          "fromY": 0,
+          "toX": 0.5,
+          "toY": 1,
+          "percent": true,
+          "lineWidth": 2,
+          "lineColor": "#ff0000"
         }
       ]
     }

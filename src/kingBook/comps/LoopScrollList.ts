@@ -114,6 +114,7 @@ export class LoopScrollList extends Laya.Script {
         const scrollRect = this.owner.content.scrollRect;
 
         const cellSize = (scrollType === Laya.ScrollType.Horizontal) ? (itemWidth + spaceX) : (itemHeight + spaceY);
+        const halfScrollRectSize = (scrollType === Laya.ScrollType.Horizontal) ? (scrollRect.width / 2) : (scrollRect.height / 2);
         const deltaTime = Laya.timer.delta * 0.001; // 秒
         const itemCount = this.owner.array.length;
 
@@ -156,7 +157,7 @@ export class LoopScrollList extends Laya.Script {
                             speedSign: speedSign,
                             resultDistance: resultInfo.distanceToResult,
                             resultIndex: resultInfo.resultIndex,
-                            resultScrollValue: this.getScrollBarValueByIndex(resultInfo.resultIndex, true) - (scrollType === Laya.ScrollType.Horizontal ? scrollRect.width / 2 : scrollRect.height / 2),
+                            resultScrollValue: this.getScrollBarValueByIndex(resultInfo.resultIndex, true) - halfScrollRectSize,
                             distance: 0,
                         }
                     }
@@ -176,23 +177,25 @@ export class LoopScrollList extends Laya.Script {
                 this._speed = 0;
                 speedPs = 0;
                 //this.getItemfocusable(7, 1);
-                //console.log("resultIndex:", this._tweeningData.resultIndex, "resultScrollValue:" + this._tweeningData.resultScrollValue, "scrollBar.value:", scrollBar.value);
+                console.log("resultIndex:", this._tweeningData.resultIndex, "resultScrollValue:" + this._tweeningData.resultScrollValue, "scrollBar.value:", scrollBar.value);
                 // scrollBar.value = this._tweeningData.resultScrollValue;
             }
         }
 
-        if (speedPs > 0) { // 列表向左/上滚动
-            if (nextScrollBarValue > scrollBar.max) { // 列表向左/上滚动，到尽头
-                scrollBar.value = nextScrollBarValue - cellSize * (itemCount - this._extraItemNum);
+        if (speedPs !== 0) {
+            if (speedPs > 0) { // 列表向左/上滚动
+                if (nextScrollBarValue > scrollBar.max) { // 列表向左/上滚动，到尽头
+                    scrollBar.value = nextScrollBarValue - cellSize * (itemCount - this._extraItemNum);
+                }
+            } else if (speedPs < 0) { // 列表向右/下滚动
+                if (nextScrollBarValue < scrollBar.min) { // 列表向右/下滚动，到尽头
+                    scrollBar.value = this.getScrollBarValueByIndex(itemCount - this._extraItemNum) + nextScrollBarValue;
+                }
             }
-        } else if (speedPs < 0) { // 列表向右/下滚动
-            if (nextScrollBarValue < scrollBar.min) { // 列表向右/下滚动，到尽头
-                scrollBar.value = this.getScrollBarValueByIndex(itemCount - this._extraItemNum) + nextScrollBarValue;
-            }
-        }
 
-        // 滚动
-        scrollBar.value += speedPs;
+            // 滚动
+            scrollBar.value += speedPs;
+        }
     }
 
 
@@ -264,19 +267,15 @@ export class LoopScrollList extends Laya.Script {
         const scrollBar = this.owner.scrollBar;
         const scrollRect = this.owner.content.scrollRect;
         const scrollType = this.owner.scrollType;
-
-        const scrollRectSize = scrollType === Laya.ScrollType.Horizontal ? scrollRect.width : scrollRect.height;
-
+        const halfScrollRectSize = scrollType === Laya.ScrollType.Horizontal ? scrollRect.width / 2 : scrollRect.height / 2;
         const itemScrollBarVal = this.getScrollBarValueByIndex(index, true);
         let ret = true;
         if (speedSign > 0) {
-            console.log(itemScrollBarVal, scrollRectSize / 2, scrollBar.max);
-
-            if (itemScrollBarVal > scrollBar.max + scrollRectSize) {
+            if (itemScrollBarVal > scrollBar.max + halfScrollRectSize) {
                 ret = false;
             }
         } else if (speedSign < 0) {
-            if (itemScrollBarVal < scrollRectSize) {
+            if (itemScrollBarVal < halfScrollRectSize) {
                 ret = false;
             }
         }
@@ -345,7 +344,6 @@ export class LoopScrollList extends Laya.Script {
         const itemHeight = this.owner.itemRender.data.height;
         const scrollType = this.owner.scrollType;
         const scrollRect = this.owner.content.scrollRect;
-
         const cellSize = (scrollType === Laya.ScrollType.Horizontal) ? (itemWidth + spaceX) : (itemHeight + spaceY);
         const focusPos = (scrollType === Laya.ScrollType.Horizontal) ? scrollRect.width * this._focusPoint.x : scrollRect.height * this._focusPoint.y;
 
@@ -367,11 +365,9 @@ export class LoopScrollList extends Laya.Script {
         const itemHeight = this.owner.itemRender.data.height;
         const scrollType = this.owner.scrollType;
         const scrollRect = this.owner.content.scrollRect;
-
         const cellSize = (scrollType === Laya.ScrollType.Horizontal) ? (itemWidth + spaceX) : (itemHeight + spaceY);
 
         let i = this.getIndexByScrollBarValue(scrollBarValue, true);
-        let i2 = i;
         let nextScrollBarValue = scrollBarValue;
         let distanceToResult = 0;
         let resultIndex = -1;
@@ -380,16 +376,14 @@ export class LoopScrollList extends Laya.Script {
         while (true) {
             i += speedSign;
 
-            i2 = speedSign > 0 ? (i2 + 1) % itemCount : (i2 - 1 + itemCount) % itemCount;
-
             nextScrollBarValue = nextScrollBarValue + speedSign * cellSize;
             distanceToResult += cellSize;
             console.log(i, distanceToResult);
 
-
-            if (this._resultIndices.indexOf(i) > -1) {
+            const findIndex = this._resultIndices.indexOf(i);
+            if (findIndex > -1) {
                 distanceToResult += Math.abs(distanceOffset);
-                resultIndex = i2;
+                resultIndex = this._resultIndices[findIndex];
                 break;
             }
 
@@ -409,6 +403,8 @@ export class LoopScrollList extends Laya.Script {
         }
         return { distanceToResult: distanceToResult, resultIndex: resultIndex };
     }
+
+
 
 
 

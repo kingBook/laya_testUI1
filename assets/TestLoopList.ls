@@ -76,14 +76,14 @@
               "_$id": "xzpfvxci",
               "_$type": "Label",
               "name": "labelIndex",
-              "x": 45,
-              "y": 79,
-              "width": 10,
-              "height": 21,
+              "x": 43,
+              "y": 69,
+              "width": 15,
+              "height": 31,
               "bottom": 0,
               "centerX": 0,
               "text": "-",
-              "fontSize": 20,
+              "fontSize": 30,
               "color": "#ff0000",
               "fitContent": "yes"
             }
@@ -110,12 +110,6 @@
       "repeatY": 3,
       "spaceY": 20,
       "scrollType": 2,
-      "_$comp": [
-        {
-          "_$type": "009ea4b0-93c3-4296-b55f-b1428d72bcf7",
-          "scriptPath": "../src/kingBook/comps/LoopScrollList.ts"
-        }
-      ],
       "_$child": [
         {
           "_$id": "ys3px1a8",

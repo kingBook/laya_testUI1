@@ -6,13 +6,13 @@
   "right": 0,
   "top": 0,
   "bottom": 0,
-  "name": "TestLoopList",
+  "name": "TestLoopingList",
   "width": 640,
   "height": 1136,
   "_$comp": [
     {
       "_$type": "0d530538-ae0f-4342-87a0-2773f2f16ae4",
-      "scriptPath": "../src/TestLoopList.ts",
+      "scriptPath": "../src/TestLoopingList.ts",
       "hList": {
         "_$ref": "6kxe8xbj"
       },
@@ -43,7 +43,7 @@
       "_$comp": [
         {
           "_$type": "009ea4b0-93c3-4296-b55f-b1428d72bcf7",
-          "scriptPath": "../src/kingBook/comps/LoopScrollList.ts"
+          "scriptPath": "../src/kingBook/comps/LoopingList.ts"
         }
       ],
       "_$child": [

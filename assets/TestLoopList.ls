@@ -38,7 +38,7 @@
       },
       "repeatX": 3,
       "repeatY": 1,
-      "spaceX": 20,
+      "spaceX": 100,
       "scrollType": 1,
       "_$comp": [
         {

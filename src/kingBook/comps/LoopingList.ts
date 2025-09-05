@@ -171,7 +171,10 @@ export class LoopingList extends Laya.Script {
         // 正在缓动到结果索引
         if (this._flags & Flag.TweeningToResult) {
             const t = this._tweeningData.distance / this._tweeningData.resultDistance;
-            this._speed = Laya.MathUtil.lerp(this._tweeningData.speedAbs * this._tweeningData.speedSign, this.minSpeed * this._tweeningData.speedSign, t);
+            const speedMax = this._tweeningData.speedAbs * this._tweeningData.speedSign;
+            const speedMin = this.minSpeed * this._tweeningData.speedSign;
+            this._speed = Laya.MathUtil.lerp(speedMax, speedMin, t);
+
             speedPs = this._speed * deltaTime;
 
             this._tweeningData.distance += Math.abs(speedPs);
@@ -369,33 +372,20 @@ export class LoopingList extends Laya.Script {
         const distanceToResult = cellSize * (oldItemCount - 1) + speedSign * distanceOffset;
 
         let oi: number;
-        if (speedSign > 0) {
-            while (true) {
-                i = (i + 1) % itemCount; // 有重复项的列表索引
-                if (this.getItemfocusable(i)) {
-                    oi = i >= oldItemCount ? i - oldItemCount : i; // 未添加重复项时的索引
-                    if (this._resultIndices[0] === oi) {
-                        break;
-                    }
-                }
-            }
-        } else {
-            while (true) {
-                i = (i - 1 + itemCount) % itemCount; // 有重复项的列表索引
-                if (this.getItemfocusable(i)) {
-                    oi = i >= oldItemCount ? i - oldItemCount : i; // 未添加重复项时的索引
-                    if (this._resultIndices[0] === oi) {
-                        break;
-                    }
+
+        while (true) {
+            if (speedSign > 0) i = (i + 1) % itemCount; // 有重复项的列表索引
+            else i = (i - 1 + itemCount) % itemCount; // 有重复项的列表索引
+
+            if (this.getItemfocusable(i)) {
+                oi = i >= oldItemCount ? i - oldItemCount : i; // 未添加重复项时的索引
+                if (this._resultIndices[0] === oi) {
+                    break;
                 }
             }
         }
         console.log("getTweeningResultInfo: distanceToResult:", distanceToResult, "resultIndex:", i);
         return { distanceToResult: distanceToResult, resultIndex: i };
     }
-
-
-
-
 
 }

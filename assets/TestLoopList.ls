@@ -38,14 +38,7 @@
       },
       "repeatX": 3,
       "repeatY": 1,
-      "spaceX": 100,
       "scrollType": 1,
-      "_$comp": [
-        {
-          "_$type": "009ea4b0-93c3-4296-b55f-b1428d72bcf7",
-          "scriptPath": "../src/kingBook/comps/LoopingList.ts"
-        }
-      ],
       "_$child": [
         {
           "_$id": "qvi4q30r",

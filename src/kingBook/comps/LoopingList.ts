@@ -8,7 +8,7 @@ enum Flag {
     Scrolling = 2,
     /** 暂停中... */
     Paused = 4,
-    /** 正在缓动到结果索引 */
+    /** 正在缓动到结果中... */
     TweeningToResult = 8
 }
 
@@ -19,9 +19,9 @@ interface ITweeningData {
     speedAbs: number;
     /** 缓动到结果时的速度符号 */
     speedSign: number;
+    /** 到结果的总距离 */
     resultDistance: number;
-    resultIndex: number;
-    resultScrollValue: number;
+    /** 到结果的当前距离 */
     distance: number;
 }
 
@@ -34,11 +34,11 @@ export class LoopingList extends Laya.Script {
     declare owner: Laya.List;
 
     /** 启动后，逐渐加速最终到达的目标速度<像素/秒> */
-    public targetSpeed: number;
+    public targetSpeed: number = 100;
     /** 启动加速度系数， 区间为：[0,1] */
     public startupAccelT: number = 0.1;
     /** 最小速度<像素/秒, 正数> */
-    public minSpeed: number = 30;
+    public minSpeed: number = 40;
 
     /** 额外添加的重复列表项数量 */
     private _extraItemNum: number;
@@ -51,7 +51,7 @@ export class LoopingList extends Laya.Script {
     /** 符合结果的索引（因为列表末尾有一些项是重复的，所以符合结果的项可能会有两个, 最多只会有两个, 有可能只有一个，且[1]的值一定比[0]的值大， [0]:原索引, [1]:重复索引） */
     private _resultIndices: number[];
     /** 聚集点，范围：[0,1] */
-    private readonly _focusPoint = { x: 0.5, y: 0.5 };
+    private readonly _focus = 0.5;
 
     // 缓动时的数据
     private _tweeningData: ITweeningData;
@@ -118,20 +118,14 @@ export class LoopingList extends Laya.Script {
         const deltaTime = Laya.timer.delta * 0.001; // 秒
         const itemCount = this.owner.array.length;
 
-        // 启动速度
-        if (this._targetSpeedT < 1) {
-            this._targetSpeedT = Math.min(this._targetSpeedT + this.startupAccelT, 1);
-            this._speed = Laya.MathUtil.lerp(this.minSpeed * Math.sign(this.targetSpeed), this.targetSpeed, this._targetSpeedT);
-        }
-
-        // 速度<像素/秒>
-        let speedPs = this._speed * deltaTime;
-
-        // 下一个 scrollBar.value
-        const nextScrollBarValue = scrollBar.value + speedPs;
-
         // 未在缓动到结果索引
-        if ((this._flags & Flag.TweeningToResult) === 0) {
+        if (!(this._flags & Flag.TweeningToResult)) {
+            // 启动速度
+            if (this._targetSpeedT < 1) {
+                this._targetSpeedT = Math.min(this._targetSpeedT + this.startupAccelT, 1);
+                this._speed = Laya.MathUtil.lerp(this.minSpeed * Math.sign(this.targetSpeed), this.targetSpeed, this._targetSpeedT);
+            }
+
             // 设置了结果
             if (this._resultIndices.length > 0) {
                 // 焦点下的索引
@@ -145,23 +139,12 @@ export class LoopingList extends Laya.Script {
                         this._flags |= Flag.TweeningToResult;
                         console.log("缓动开始 focusedIndex:", focusedIndex);
 
-                        const resultInfo = this.getTweeningResultInfo(speedSign, scrollBar.value);
-
-                        //test
-                        //this.setPaused(true);
-                        // return;
-
                         this._tweeningData = {
-                            /** 缓动到结果开始时焦点下的索引 */
                             startFocusedIndex: focusedIndex,
-                            /** 缓动到结果时的速度长度 */
                             speedAbs: Math.abs(this._speed),
-                            /** 缓动到结果时的速度符号 */
                             speedSign: speedSign,
-                            resultDistance: resultInfo.distanceToResult,
-                            resultIndex: resultInfo.resultIndex,
-                            resultScrollValue: this.getScrollBarValueByIndex(resultInfo.resultIndex, true) - halfScrollRectSize,
-                            distance: 0,
+                            resultDistance: this.getTweeningResultDistance(speedSign),
+                            distance: 0
                         }
                     }
                 }
@@ -170,36 +153,45 @@ export class LoopingList extends Laya.Script {
 
         // 正在缓动到结果索引
         if (this._flags & Flag.TweeningToResult) {
+            this._tweeningData.distance += Math.abs(this._speed * deltaTime);
             const t = this._tweeningData.distance / this._tweeningData.resultDistance;
-            const speedMax = this._tweeningData.speedAbs * this._tweeningData.speedSign;
-            const speedMin = this.minSpeed * this._tweeningData.speedSign;
-            this._speed = Laya.MathUtil.lerp(speedMax, speedMin, t);
-
-            speedPs = this._speed * deltaTime;
-
-            this._tweeningData.distance += Math.abs(speedPs);
-
             if (t >= 1) {
-                console.log("resultIndex:", this._tweeningData.resultIndex, "speedSign:", this._tweeningData.speedSign, "resultValue:", this._tweeningData.resultScrollValue, "value:", scrollBar.value);
-                // test
-                //this.setPaused(true);
+                console.log("speedSign:", this._tweeningData.speedSign, "value:", scrollBar.value);
+                const nearestResultVal = this.getNearestResultScrollBarValue(scrollBar.value);
+                const sign = this._tweeningData.speedSign;
+                const reached = sign > 0
+                    ? scrollBar.value >= nearestResultVal
+                    : scrollBar.value <= nearestResultVal;
 
-                this._speed = 0;
-                speedPs = 0;
+                if (reached) {
+                    scrollBar.value = nearestResultVal;
+                    this._speed = 0;
+                    this._flags &= ~Flag.TweeningToResult;
+                    this.stopScrolling();
+                } else {
+                    this._speed = this.minSpeed * sign;
+                }
+            } else {
+                const speedMax = this._tweeningData.speedAbs * this._tweeningData.speedSign;
+                const speedMin = this.minSpeed * this._tweeningData.speedSign;
+                this._speed = Laya.MathUtil.lerp(speedMax, speedMin, t);
             }
         }
 
-        if (speedPs !== 0) {
+        if (this._speed !== 0) {
+            // 速度<像素/秒>
+            let speedPs = this._speed * deltaTime;
+            // 下一个 scrollBar.value
+            const nextVal = scrollBar.value + speedPs;
             if (speedPs > 0) { // 列表向左/上滚动
-                if (nextScrollBarValue > scrollBar.max) { // 列表向左/上滚动，到尽头
-                    scrollBar.value = nextScrollBarValue - cellSize * (itemCount - this._extraItemNum);
+                if (nextVal > scrollBar.max) { // 列表向左/上滚动，到尽头
+                    scrollBar.value = nextVal - cellSize * (itemCount - this._extraItemNum);
                 }
             } else if (speedPs < 0) { // 列表向右/下滚动
-                if (nextScrollBarValue < scrollBar.min) { // 列表向右/下滚动，到尽头
-                    scrollBar.value = this.getScrollBarValueByIndex(itemCount - this._extraItemNum) + nextScrollBarValue;
+                if (nextVal < scrollBar.min) { // 列表向右/下滚动，到尽头
+                    scrollBar.value = this.getScrollBarValueByIndex(itemCount - this._extraItemNum) + nextVal;
                 }
             }
-
             // 滚动
             scrollBar.value += speedPs;
         }
@@ -212,7 +204,7 @@ export class LoopingList extends Laya.Script {
      * @param starAccelerationT 启动加速度系数，范围[0,1]
      */
     public startScrolling(speedTarget: number, startupAccelerationT: number = 0.1): LoopingList {
-        if ((this._flags & Flag.Inited) === 0) throw new Error(`还未初始化, 不能开始滚动`);
+        if (!(this._flags & Flag.Inited)) throw new Error(`还未初始化, 不能开始滚动`);
 
         if (this._flags & Flag.Scrolling) return;
         this._flags |= Flag.Scrolling;
@@ -224,11 +216,6 @@ export class LoopingList extends Laya.Script {
         this.targetSpeed = speedTarget;
         this.startupAccelT = startupAccelerationT;
 
-        // 向右滚动时，立即移动到末尾，重复项的第一项处
-        if (this.targetSpeed < 0) {
-            this.owner.scrollTo(this.owner.array.length - this._extraItemNum);
-        }
-
         // 取消暂停
         this.setPaused(false);
         return this;
@@ -239,8 +226,9 @@ export class LoopingList extends Laya.Script {
      * @param index 去除重复项，原列表中的索引
      */
     public setScrollResult(index: number): void {
-        if ((this._flags & Flag.Inited) === 0) throw new Error(`还未初始化, 不能设置结果`);
-        if ((this._flags & Flag.Scrolling) === 0) throw new Error(`未开始滚动，不能设置结果`);
+        if (!(this._flags & Flag.Inited)) throw new Error(`还未初始化, 不能设置结果`);
+        if (!(this._flags & Flag.Scrolling)) throw new Error(`未开始滚动，不能设置结果`);
+        if (this._flags & Flag.TweeningToResult) throw new Error(`正在缓动到结果中...，不能设置结果`);
 
         const inRange = index >= 0 && index < this.owner.array.length - this._extraItemNum;
         if (!inRange) throw new Error("设置的结果超出范围");
@@ -262,23 +250,23 @@ export class LoopingList extends Laya.Script {
 
     /** 停止 */
     public stopScrolling(): void {
-
+        this._flags &= ~Flag.Scrolling;
     }
 
     public onDestroy(): void {
 
     }
 
-    /** 指定的列表项能被滚动到焦点处（列表头、尾处的项，就可能滚动不到中间） */
-    private getItemfocusable(index: number): boolean {
-        const scrollBar = this.owner.scrollBar;
-        const scrollRect = this.owner.content.scrollRect;
-        const scrollType = this.owner.scrollType;
-        const halfScrollRectSize = scrollType === Laya.ScrollType.Horizontal ? scrollRect.width / 2 : scrollRect.height / 2;
-        const itemScrollBarVal = this.getScrollBarValueByIndex(index, true);
-        let ret = itemScrollBarVal > halfScrollRectSize && itemScrollBarVal < scrollBar.max + halfScrollRectSize;
-        return ret;
-    }
+    // /** 指定的列表项能被滚动到焦点处（列表头、尾处的项，就可能滚动不到中间） */
+    // private getItemfocusable(index: number): boolean {
+    //     const scrollBar = this.owner.scrollBar;
+    //     const scrollRect = this.owner.content.scrollRect;
+    //     const scrollType = this.owner.scrollType;
+    //     const halfScrollRectSize = scrollType === Laya.ScrollType.Horizontal ? scrollRect.width / 2 : scrollRect.height / 2;
+    //     const itemScrollBarVal = this.getScrollBarValueByIndex(index, true);
+    //     let ret = itemScrollBarVal > halfScrollRectSize && itemScrollBarVal < scrollBar.max + halfScrollRectSize;
+    //     return ret;
+    // }
 
     /**
      * 根据速度的方向，获取当前索引的下一个索引
@@ -317,15 +305,11 @@ export class LoopingList extends Laya.Script {
         const itemWidth = this.owner.itemRender.data.width;
         const itemHeight = this.owner.itemRender.data.height;
         const scrollType = this.owner.scrollType;
+        const cellSize = (scrollType === Laya.ScrollType.Horizontal) ? (itemWidth + spaceX) : (itemHeight + spaceY);
+        const halfItemSize = (scrollType === Laya.ScrollType.Horizontal) ? (itemWidth / 2) : (itemHeight / 2);
 
-        let val = NaN;
-        if (scrollType === Laya.ScrollType.Horizontal) {
-            val = i * (itemWidth + spaceX);
-            if (isCentral) val += itemWidth / 2;
-        } else {
-            val = i * (itemHeight + spaceY);
-            if (isCentral) val += itemHeight / 2;
-        }
+        let val = i * cellSize;
+        if (isCentral) val += halfItemSize;
         return val;
     }
 
@@ -343,9 +327,9 @@ export class LoopingList extends Laya.Script {
         const scrollType = this.owner.scrollType;
         const scrollRect = this.owner.content.scrollRect;
         const cellSize = (scrollType === Laya.ScrollType.Horizontal) ? (itemWidth + spaceX) : (itemHeight + spaceY);
-        const focusPos = (scrollType === Laya.ScrollType.Horizontal) ? scrollRect.width * this._focusPoint.x : scrollRect.height * this._focusPoint.y;
 
         if (focus) {
+            const focusPos = (scrollType === Laya.ScrollType.Horizontal) ? scrollRect.width * this._focus : scrollRect.height * this._focus;
             scrollBarValue += focusPos;
         }
         return Math.trunc(scrollBarValue / cellSize);
@@ -354,9 +338,8 @@ export class LoopingList extends Laya.Script {
     /**
      * 根据速度方向、当前滚动条值获取到结果的距离
      */
-    private getTweeningResultInfo(speedSign: number, scrollBarValue: number): { distanceToResult: number, resultIndex: number } {
+    private getTweeningResultDistance(speedSign: number): number {
         const oldItemCount = this.owner.array.length - this._extraItemNum;
-        const itemCount = this.owner.array.length;
         const spaceX = this.owner.spaceX;
         const spaceY = this.owner.spaceY;
         const itemWidth = this.owner.itemRender.data.width;
@@ -365,27 +348,39 @@ export class LoopingList extends Laya.Script {
         const scrollRect = this.owner.content.scrollRect;
         const cellSize = (scrollType === Laya.ScrollType.Horizontal) ? (itemWidth + spaceX) : (itemHeight + spaceY);
         const halfScrollRectSize = scrollType === Laya.ScrollType.Horizontal ? scrollRect.width / 2 : scrollRect.height / 2;
+        const scrollBarValue = this.owner.scrollBar.value;
 
         let i = this.getIndexByScrollBarValue(scrollBarValue, true);
-
         const distanceOffset = this.getScrollBarValueByIndex(i, true) - (scrollBarValue + halfScrollRectSize); // i项中间-可视区中间的偏移量
         const distanceToResult = cellSize * (oldItemCount - 1) + speedSign * distanceOffset;
+        console.log("getTweeningResultDistance: distanceOffset:", distanceOffset, "distanceToResult:", distanceToResult);
+        return distanceToResult;
+    }
 
-        let oi: number;
+    /** 获取距离最近的结果的滚动条值 */
+    private getNearestResultScrollBarValue(scrollBarValue: number): number {
+        const scrollType = this.owner.scrollType;
+        const scrollRect = this.owner.content.scrollRect;
+        const halfScrollRectSize = (scrollType === Laya.ScrollType.Horizontal) ? (scrollRect.width / 2) : (scrollRect.height / 2);
+        const centerValue = scrollBarValue + halfScrollRectSize;
 
-        while (true) {
-            if (speedSign > 0) i = (i + 1) % itemCount; // 有重复项的列表索引
-            else i = (i - 1 + itemCount) % itemCount; // 有重复项的列表索引
+        let nearestIndex = this._resultIndices[0];
+        let nearestValue = this.getScrollBarValueByIndex(nearestIndex, true);
+        let minDistance = Math.abs(nearestValue - centerValue);
 
-            if (this.getItemfocusable(i)) {
-                oi = i >= oldItemCount ? i - oldItemCount : i; // 未添加重复项时的索引
-                if (this._resultIndices[0] === oi) {
-                    break;
-                }
+        for (let i = 1; i < this._resultIndices.length; i++) {
+            const idx = this._resultIndices[i];
+            const val = this.getScrollBarValueByIndex(idx, true);
+            const dist = Math.abs(val - centerValue);
+            if (dist < minDistance) {
+                minDistance = dist;
+                nearestIndex = idx;
+                nearestValue = val;
             }
         }
-        console.log("getTweeningResultInfo: distanceToResult:", distanceToResult, "resultIndex:", i);
-        return { distanceToResult: distanceToResult, resultIndex: i };
+
+        nearestValue -= halfScrollRectSize;
+        return nearestValue;
     }
 
 }

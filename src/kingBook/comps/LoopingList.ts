@@ -39,6 +39,10 @@ export class LoopingList extends Laya.Script {
     public startupAccelT: number = 0.1;
     /** 最小速度<像素/秒, 正数> */
     public minSpeed: number = 40;
+    /** 用于指定设置了结果后，速度下降到指定的程度（targetSpeed * 此值），开始缓动到结果，范围[0,1] */
+    public tweenThresholdT: number = 0.5;
+    /** 得到奖励角时降速摩擦系数 */
+    public resultFriction: number = 0.985;
 
     /** 额外添加的重复列表项数量 */
     private _extraItemNum: number;
@@ -50,6 +54,7 @@ export class LoopingList extends Laya.Script {
     private _flags: number;
     /** 符合结果的索引（因为列表末尾有一些项是重复的，所以符合结果的项可能会有两个, 最多只会有两个, 有可能只有一个，且[1]的值一定比[0]的值大， [0]:原索引, [1]:重复索引） */
     private _resultIndices: number[];
+
     /** 聚集点，范围：[0,1] */
     private readonly _focus = 0.5;
 
@@ -98,10 +103,12 @@ export class LoopingList extends Laya.Script {
 
         // 刷新列表
         this.owner.refresh();
+
         return this;
     }
 
-    public onUpdate(): void {
+    public onUpdate2(): void {
+        if (!(this._flags & Flag.Inited)) return;
         if (this._flags & Flag.Paused) return;
         if (!(this._flags & Flag.Scrolling)) return;
 
@@ -128,25 +135,29 @@ export class LoopingList extends Laya.Script {
 
             // 设置了结果
             if (this._resultIndices.length > 0) {
-                // 焦点下的索引
-                const focusedIndex = this.getIndexByScrollBarValue(scrollBar.value, true);
-                const speedSign = Math.sign(this._speed);
+                if (Math.abs(this._speed) <= Math.abs(this.targetSpeed * this.tweenThresholdT)) { // 设置了结果，等速度降到一定程度后，才开始缓动到结果
+                    // 焦点下的索引
+                    const focusedIndex = this.getIndexByScrollBarValue(scrollBar.value, true);
+                    const speedSign = Math.sign(this._speed);
 
-                if (speedSign !== 0) {
-                    const isFocusIndexEqualToNextIndex = this._resultIndices.find(item => focusedIndex === this.getNextItemIndex(item, speedSign)) !== undefined;
-                    // 焦点下的索引等于下一个索引
-                    if (isFocusIndexEqualToNextIndex) {
-                        this._flags |= Flag.TweeningToResult;
-                        console.log("缓动开始 focusedIndex:", focusedIndex);
+                    if (speedSign !== 0) {
+                        const isFocusIndexEqualToNextIndex = this._resultIndices.find(item => focusedIndex === this.getNextItemIndex(item, speedSign)) !== undefined;
+                        // 焦点下的索引等于下一个索引
+                        if (isFocusIndexEqualToNextIndex) {
+                            this._flags |= Flag.TweeningToResult;
+                            console.log("缓动开始 focusedIndex:", focusedIndex);
 
-                        this._tweeningData = {
-                            startFocusedIndex: focusedIndex,
-                            speedAbs: Math.abs(this._speed),
-                            speedSign: speedSign,
-                            resultDistance: this.getTweeningResultDistance(speedSign),
-                            distance: 0
+                            this._tweeningData = {
+                                startFocusedIndex: focusedIndex,
+                                speedAbs: Math.abs(this._speed),
+                                speedSign: speedSign,
+                                resultDistance: this.getTweeningResultDistance(speedSign),
+                                distance: 0
+                            }
                         }
                     }
+                } else {
+                    this._speed *= this.resultFriction;
                 }
             }
         }
@@ -156,7 +167,7 @@ export class LoopingList extends Laya.Script {
             this._tweeningData.distance += Math.abs(this._speed * deltaTime);
             const t = this._tweeningData.distance / this._tweeningData.resultDistance;
             if (t >= 1) {
-                console.log("speedSign:", this._tweeningData.speedSign, "value:", scrollBar.value);
+                //console.log("speedSign:", this._tweeningData.speedSign, "value:", scrollBar.value);
                 const nearestResultVal = this.getNearestResultScrollBarValue(scrollBar.value);
                 const sign = this._tweeningData.speedSign;
                 const reached = sign > 0
@@ -194,6 +205,8 @@ export class LoopingList extends Laya.Script {
             }
             // 滚动
             scrollBar.value += speedPs;
+            console.log(speedPs);
+
         }
     }
 
@@ -239,7 +252,6 @@ export class LoopingList extends Laya.Script {
             // 重复项中，符合结果的索引
             this._resultIndices[1] = this.owner.array.length - this._extraItemNum + index;
         }
-        //console.log(`设置结果，符合结果的索引有：${this._resultIndices[0]}, ${this._resultIndices.length > 1 ? this._resultIndices[1] : '-'}`);
     }
 
     /** 设置暂停 */
@@ -251,6 +263,9 @@ export class LoopingList extends Laya.Script {
     /** 停止 */
     public stopScrolling(): void {
         this._flags &= ~Flag.Scrolling;
+    }
+
+    public onDisable(): void {
     }
 
     public onDestroy(): void {

@@ -6,13 +6,13 @@
   "right": 0,
   "top": 0,
   "bottom": 0,
-  "name": "TestLoopingList",
+  "name": "TestScrollingLotteryListScript",
   "width": 640,
   "height": 1136,
   "_$comp": [
     {
       "_$type": "0d530538-ae0f-4342-87a0-2773f2f16ae4",
-      "scriptPath": "../src/TestLoopingList.ts",
+      "scriptPath": "../src/TestScrollingLotteryListScript.ts",
       "hList": {
         "_$ref": "6kxe8xbj"
       },
@@ -73,6 +73,7 @@
               "y": 69,
               "width": 15,
               "height": 31,
+              "visible": false,
               "bottom": 0,
               "centerX": 0,
               "text": "-",
@@ -137,6 +138,7 @@
               "y": 79,
               "width": 10,
               "height": 21,
+              "visible": false,
               "bottom": 0,
               "centerX": 0,
               "text": "-",
@@ -152,10 +154,12 @@
       "_$id": "z8qpag7f",
       "_$type": "Sprite",
       "name": "Sprite",
+      "active": false,
       "x": 270,
       "y": 22,
       "width": 100,
       "height": 225,
+      "visible": false,
       "_gcmds": [
         {
           "_$type": "DrawLineCmd",

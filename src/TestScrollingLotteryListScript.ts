@@ -48,6 +48,12 @@ export class TestScrollingLotteryListScript extends Laya.Script {
 
             this.hList.getComponent(ScrollingLotteryListScript).setResult(resultIndex);
             this.vList.getComponent(ScrollingLotteryListScript).setResult(resultIndex);
+        } else if (evt.key === 'k') {
+            const resultIndex = Math.trunc(Math.random() * 5);
+            console.log("立即设置到结果处", resultIndex);
+            this.hList.getComponent(ScrollingLotteryListScript).setResult(resultIndex, true);
+            this.vList.getComponent(ScrollingLotteryListScript).setResult(resultIndex, true);
+
         }
     }
 

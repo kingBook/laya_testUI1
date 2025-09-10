@@ -18,7 +18,11 @@
       },
       "vList": {
         "_$ref": "pnlinnwv"
-      }
+      },
+      "letterList": {
+        "_$ref": "maucymo2"
+      },
+      "numberList": null
     }
   ],
   "_$child": [
@@ -169,8 +173,7 @@
     {
       "_$id": "z8qpag7f",
       "_$type": "Sprite",
-      "name": "Sprite",
-      "active": false,
+      "name": "redLine",
       "x": 270,
       "y": 363,
       "width": 100,
@@ -186,6 +189,116 @@
           "percent": true,
           "lineWidth": 2,
           "lineColor": "#ff0000"
+        }
+      ]
+    },
+    {
+      "_$id": "rkb4wi9d",
+      "_$type": "Panel",
+      "name": "bodyPanel",
+      "y": 936,
+      "width": 640,
+      "height": 200,
+      "_mouseState": 2,
+      "left": 0,
+      "right": 0,
+      "bottom": 0,
+      "bgColor": "#ffffff",
+      "_$child": [
+        {
+          "_$id": "maucymo2",
+          "_$var": true,
+          "_$type": "List",
+          "name": "letterList",
+          "y": 50,
+          "width": 640,
+          "height": 70,
+          "left": 0,
+          "right": 0,
+          "bottom": 80,
+          "itemTemplate": {
+            "_$ref": "cjqwp5ry",
+            "_$tmpl": "itemRender"
+          },
+          "repeatX": 7,
+          "repeatY": 1,
+          "spaceX": 10,
+          "scrollType": 1,
+          "_$child": [
+            {
+              "_$id": "cjqwp5ry",
+              "_$type": "Box",
+              "name": "item",
+              "width": 100,
+              "height": 70,
+              "bgColor": "#d5e1ed",
+              "_$child": [
+                {
+                  "_$id": "6afsb2rt",
+                  "_$type": "Label",
+                  "name": "Label",
+                  "x": 40,
+                  "y": 15,
+                  "width": 21,
+                  "height": 41,
+                  "centerX": 0,
+                  "centerY": 0,
+                  "text": "A",
+                  "fontSize": 40,
+                  "fitContent": "yes",
+                  "bold": true
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "_$id": "s0fi6cwi",
+          "_$var": true,
+          "_$type": "List",
+          "name": "numberList",
+          "y": 130,
+          "width": 640,
+          "height": 70,
+          "_mouseState": 1,
+          "left": 0,
+          "right": 0,
+          "bottom": 0,
+          "itemTemplate": {
+            "_$ref": "ervgoolu",
+            "_$tmpl": "itemRender"
+          },
+          "repeatX": 7,
+          "repeatY": 1,
+          "spaceX": 10,
+          "scrollType": 1,
+          "_$child": [
+            {
+              "_$id": "ervgoolu",
+              "_$type": "Box",
+              "name": "item",
+              "width": 100,
+              "height": 70,
+              "bgColor": "#d5e1ed",
+              "_$child": [
+                {
+                  "_$id": "ii4im3z0",
+                  "_$type": "Label",
+                  "name": "Label",
+                  "x": 40,
+                  "y": 15,
+                  "width": 21,
+                  "height": 41,
+                  "centerX": 0,
+                  "centerY": 0,
+                  "text": "0",
+                  "fontSize": 40,
+                  "fitContent": "yes",
+                  "bold": true
+                }
+              ]
+            }
+          ]
         }
       ]
     }

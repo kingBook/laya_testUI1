@@ -42,7 +42,9 @@ export class TestScrollingLotteryListScript extends Laya.Script {
 
         // 字母
         this.letterList.array = [{ Label: "A" }, { Label: "B" }, { Label: "C" }, { Label: "D" }, { Label: "E" }];
-        this.letterList.addComponent(ScrollingLotteryListScript).init();
+        const letterLottery = this.letterList.addComponent(ScrollingLotteryListScript);
+        letterLottery.minSpeed = 60;
+        letterLottery.init();
         // 数字
         // const numberListData = [];
         // for (let i = 0; i <= 9; i++)numberListData.push({ Label: `${i}` });
@@ -70,7 +72,10 @@ export class TestScrollingLotteryListScript extends Laya.Script {
 
 
         if (evt.key === 'u') {
-            this.letterList.getComponent(ScrollingLotteryListScript).startScrolling(1000);
+            const letterLottery = this.letterList.getComponent(ScrollingLotteryListScript);
+            letterLottery.minSpeed=100;
+            letterLottery.tweenThresholdT = 0.8;
+            letterLottery.startScrolling(1000);
         } else if (evt.key === 'i') {
             const resultIndex = Math.trunc(Math.random() * 5);
             console.log("设置结果", resultIndex, this.letterList.array[resultIndex].Label);

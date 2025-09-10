@@ -213,9 +213,9 @@ export class ScrollingLotteryListScript extends Laya.Script {
     /**
      * 开始滚动
      * @param targetSpeed 目标速度<像素/秒> (启动时逐渐加速到达的目标速度)， 默认：1000。 * 注意：大于0，列表向左滚动，小于0，列表向右滚动
-     * @param startupAcceT 启动加速度系数， 默认：0.1，范围区间：[0,1]
+     * @param startupAccelT 启动加速度系数， 默认：0.1，范围区间：[0,1]
      */
-    public startScrolling(targetSpeed: number = 1000, startupAcceT: number = 0.1): ScrollingLotteryListScript {
+    public startScrolling(targetSpeed?: number, startupAccelT?: number): ScrollingLotteryListScript {
         if (!(this._flags & Flag.Inited)) throw new Error(`还未初始化, 不能开始滚动`);
 
         if (this._flags & Flag.Scrolling) return;
@@ -225,8 +225,8 @@ export class ScrollingLotteryListScript extends Laya.Script {
         this._targetSpeedT = 0;
         this._resultIndices.length = 0;
 
-        this.targetSpeed = targetSpeed;
-        this.startupAccelT = startupAcceT;
+        (!isNaN(targetSpeed)) && (this.targetSpeed = targetSpeed);
+        (!isNaN(startupAccelT)) && (this.startupAccelT = startupAccelT);
 
         // 取消暂停
         this.setPaused(false);

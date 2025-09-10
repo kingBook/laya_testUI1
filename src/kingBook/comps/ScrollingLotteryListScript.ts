@@ -238,7 +238,6 @@ export class ScrollingLotteryListScript extends Laya.Script {
             Laya.timer.once(ms, this, () => {
                 resolve(this);
             });
-
         });
     }
 

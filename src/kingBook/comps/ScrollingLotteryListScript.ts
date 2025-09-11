@@ -20,7 +20,7 @@ interface ITweeningData {
     /** 缓动到结果时的速度符号 */
     speedSign: number;
     /** 到结果的总距离 */
-    resultDistance: number;
+    distanceToResult: number;
     /** 到结果的当前距离 */
     distance: number;
 }
@@ -66,6 +66,18 @@ export class ScrollingLotteryListScript extends Laya.Script {
     private _itemSize: number;
     private _cellSize: number;
     private _focusPos: number;
+    /** 原始项数 */
+    private _originalItemCount: number;
+    /** 加额外重复项的总项数 */
+    private _itemCount: number;
+
+    private readonly _tempIndices: number[] = [];
+
+    /** 滚动中... */
+    public get isScrolling(): boolean { return (this._flags & Flag.Scrolling) > 0; }
+    /** 暂停中... */
+    public get isPaused(): boolean { return (this._flags & Flag.Paused) > 0; }
+
 
     /** 初始化 */
     public init(): ScrollingLotteryListScript {
@@ -99,11 +111,12 @@ export class ScrollingLotteryListScript extends Laya.Script {
             : Math.ceil(scrollRect.height / cellSize);
 
         // 列表的末尾加入额外重复项
-        const arrayLen = this.owner.array.length;
+        this._originalItemCount = this.owner.array.length;
         for (let i = 0; i < this._extraItemNum; i++) {
-            let idx = i % arrayLen;
+            let idx = i % this._originalItemCount;
             this.owner.array.push(this.owner.array[idx]);
         }
+        this._itemCount = this.owner.array.length;
 
         // 必须设置repeatX、repeatY为列表的数据总个数，否则循环滚动设置 scrollBar.value 回开头或末尾第重复项时，会抖动
         (scrollType === Laya.ScrollType.Horizontal)
@@ -125,7 +138,6 @@ export class ScrollingLotteryListScript extends Laya.Script {
         if (!(this._flags & Flag.Scrolling)) return;
 
         const deltaTime = Laya.timer.delta * 0.001; // 秒
-        const itemCount = this.owner.array.length;
 
         // 未在缓动到结果索引
         if (!(this._flags & Flag.TweeningToResult)) {
@@ -153,7 +165,7 @@ export class ScrollingLotteryListScript extends Laya.Script {
                                 startFocusedIndex: focusedIndex,
                                 speedAbs: Math.abs(this._speed),
                                 speedSign: speedSign,
-                                resultDistance: this.getTweeningResultDistance(speedSign),
+                                distanceToResult: this.getTweeningDistanceToResult(speedSign, focusedIndex),
                                 distance: 0
                             }
                         }
@@ -167,8 +179,15 @@ export class ScrollingLotteryListScript extends Laya.Script {
 
         // 缓动到结果中...
         if (this._flags & Flag.TweeningToResult) {
+            //test
+            this._speed = 0;
+
+            console.log("startFocusedIndex", this._tweeningData.startFocusedIndex);
+            console.log("dist",this.getTweeningDistance(this._tweeningData, this._scrollBar.value), "distToResult",this._tweeningData.distanceToResult);
+            return;
+
             this._tweeningData.distance += Math.abs(this._speed * deltaTime);
-            const t = this._tweeningData.distance / this._tweeningData.resultDistance;
+            const t = this._tweeningData.distance / this._tweeningData.distanceToResult;
             if (t >= 1) {
                 //console.log("speedSign:", this._tweeningData.speedSign, "value:", this._scrollBar.value);
                 const nearestResultVal = this.getNearestResultScrollBarValue(this._scrollBar.value);
@@ -180,7 +199,7 @@ export class ScrollingLotteryListScript extends Laya.Script {
                 if (reached) { // 到达结果处
                     this._scrollBar.value = nearestResultVal;
                     this.stopScrolling();
-                } else {
+                } else { // 未到达结果处，最小滚动速度继续移动
                     this._speed = this.minSpeed * sign;
                 }
             } else {
@@ -191,17 +210,15 @@ export class ScrollingLotteryListScript extends Laya.Script {
         }
 
         if (this._speed !== 0) {
-            // 速度<像素/秒>
-            let speedPs = this._speed * deltaTime;
-            // 下一个 scrollBar.value
-            const nextVal = this._scrollBar.value + speedPs;
+            let speedPs = this._speed * deltaTime; // 速度<像素/秒>
+            const nextVal = this._scrollBar.value + speedPs; // 下一个 scrollBar.value
             if (speedPs > 0) { // 列表向左/上滚动
                 if (nextVal > this._scrollBar.max) { // 列表向左/上滚动，到尽头
-                    this._scrollBar.value = nextVal - this._cellSize * (itemCount - this._extraItemNum);
+                    this._scrollBar.value = nextVal - this.getScrollBarValueByIndex(this._originalItemCount);
                 }
             } else if (speedPs < 0) { // 列表向右/下滚动
                 if (nextVal < this._scrollBar.min) { // 列表向右/下滚动，到尽头
-                    this._scrollBar.value = this.getScrollBarValueByIndex(itemCount - this._extraItemNum) + nextVal;
+                    this._scrollBar.value = this.getScrollBarValueByIndex(this._originalItemCount) + nextVal;
                 }
             }
             // 滚动
@@ -218,7 +235,10 @@ export class ScrollingLotteryListScript extends Laya.Script {
     public startScrolling(targetSpeed?: number, startupAccelT?: number): ScrollingLotteryListScript {
         if (!(this._flags & Flag.Inited)) throw new Error(`还未初始化, 不能开始滚动`);
 
-        if (this._flags & Flag.Scrolling) return;
+        if (this._flags & Flag.Scrolling) {
+            console.warn("正在滚动中..., 取消滚动");
+            return this;
+        }
         this._flags |= Flag.Scrolling;
 
         this._speed = 0;
@@ -256,19 +276,17 @@ export class ScrollingLotteryListScript extends Laya.Script {
     public setResult(index: number, isImmediate: boolean = false): ScrollingLotteryListScript {
         if (!(this._flags & Flag.Inited)) throw new Error(`还未初始化, 不能设置结果`);
         if (this._flags & Flag.TweeningToResult) throw new Error(`正在缓动到结果中...，不能设置结果`);
+        if (isImmediate && (this._flags & Flag.Scrolling)) throw new Error(`正在滚动中，不能立即设置到结果`);
         if (!isImmediate && !(this._flags & Flag.Scrolling)) throw new Error(`不是立即设置时，未开始滚动，不能设置结果`);
 
-        const itemCount = this.owner.array.length; // 加额外重复项的总项数
-        const originalItemCount = itemCount - this._extraItemNum; // 原始项数
-
-        const inRange = index >= 0 && index < originalItemCount;
+        const inRange = index >= 0 && index < this._originalItemCount;
         if (!inRange) throw new Error("设置的结果超出范围");
 
 
         // 符合结果的索引
-        for (let i = 0, c = Math.ceil(itemCount / originalItemCount); i < c; i++) {
-            const idx = i * originalItemCount + index;
-            (idx < itemCount) && this._resultIndices.push(idx);
+        for (let i = 0, c = Math.ceil(this._itemCount / this._originalItemCount); i < c; i++) {
+            const idx = i * this._originalItemCount + index;
+            (idx < this._itemCount) && this._resultIndices.push(idx);
         }
 
         // 立即设置到结果处
@@ -280,6 +298,7 @@ export class ScrollingLotteryListScript extends Laya.Script {
                     break;
                 }
             }
+            this._resultIndices.length = 0;
         }
 
         // 清除延时
@@ -313,9 +332,13 @@ export class ScrollingLotteryListScript extends Laya.Script {
 
     }
 
+    /** 获取指定索引的原始索引 */
+    public getOriginalIndex(index: number): number {
+        return index % this._originalItemCount;
+    }
+
     /** 指定的列表项能被滚动到焦点处（列表头、尾处的项，就可能滚动不到） */
     private getItemfocusable(index: number): boolean {
-        if (!(this._flags & Flag.Inited)) throw new Error(`还未初始化, 不能调用这个方法`);
         const itemScrollBarVal = this.getScrollBarValueByIndex(index, true);
         let ret = itemScrollBarVal >= this._focusPos && itemScrollBarVal <= this._scrollBar.max + this._focusPos;
         return ret;
@@ -328,17 +351,16 @@ export class ScrollingLotteryListScript extends Laya.Script {
      */
     private getNextScrollIndex(currentIndex: number, speedSign: number): number {
         if (Math.abs(speedSign) !== 1) throw new Error(`参数 speedSign 必须是 1 或 -1, 当前为: ${speedSign}`);
-        const itemCount = this.owner.array.length;
         let ret = -1;
         if (speedSign > 0) { // 列表向左/上滚动
             ret = currentIndex + 1;
-            if (ret >= itemCount) {
+            if (ret >= this._itemCount) {
                 ret = this._extraItemNum;
             }
         } else { // 列表向右/下滚动
             ret = currentIndex - 1;
             if (ret < 0) {
-                ret = itemCount - this._extraItemNum - 1;
+                ret = this._itemCount - this._extraItemNum - 1;
             }
         }
         if (ret === -1) throw new Error(`无法找到下一个索引, currentIndex:${currentIndex}, speedSign:${speedSign}`);
@@ -347,14 +369,13 @@ export class ScrollingLotteryListScript extends Laya.Script {
 
     /**
      * 获取指定列表项滚动条的值
-     * @param i 列表项索引
+     * @param index 列表项索引
      * @param isCentral 是否取列表项中间的滚动条值，默认： false 取列表项左/顶在列表可视区左/顶的滚动条值；true：取列表项的中间在列表可视区左/顶的滚动条值
      */
-    private getScrollBarValueByIndex(i: number, isCentral: boolean = false): number {
-        const itemCount = this.owner.array.length;
-        if (i < 0 || i > itemCount - 1) throw new Error(`索引超出范围, i:${i}, itemCount:${itemCount}`);
+    private getScrollBarValueByIndex(index: number, isCentral: boolean = false): number {
+        if (index < 0 || index > this._itemCount - 1) throw new Error(`索引超出范围, i:${index}, itemCount:${this._itemCount}`);
 
-        let val = i * this._cellSize;
+        let val = index * this._cellSize;
         if (isCentral) val += this._itemSize / 2;
         return val;
     }
@@ -371,17 +392,40 @@ export class ScrollingLotteryListScript extends Laya.Script {
     }
 
     /**
-     * 根据速度方向、当前滚动条值获取到结果的距离
+     * 根据速度方向、当前焦点下的索引，获取到结果的总距离
      */
-    private getTweeningResultDistance(speedSign: number): number {
-        const originalItemCount = this.owner.array.length - this._extraItemNum;
+    private getTweeningDistanceToResult(speedSign: number, focusedIndex: number): number {
         const scrollBarValue = this.owner.scrollBar.value;
 
-        let i = this.getIndexByScrollBarValue(scrollBarValue, true);
-        const distOffset = this.getScrollBarValueByIndex(i, true) - (scrollBarValue + this._focusPos); // i项中间-可视区中间的偏移量
-        const distToResult = this._cellSize * (originalItemCount - 1) + speedSign * distOffset;
-        this.isShowLogMsg && console.log("getTweeningResultDistance: distOffset:", distOffset, "distToResult:", distToResult);
+        const distOffset = this.getScrollBarValueByIndex(focusedIndex, true) - (scrollBarValue + this._focusPos); // focusedIndex项中间-可视区焦点处的偏移量
+        const distToResult = this._cellSize * (this._originalItemCount - 1) + speedSign * distOffset;
+        /*this.isShowLogMsg && */console.log("getTweeningDistanceToResult: distOffset:", distOffset, "distToResult:", distToResult);
         return distToResult;
+    }
+
+    private getTweeningDistance(tweeningData: ITweeningData, scrollBarValue: number): number {
+        const speedSign = tweeningData.speedSign;
+        const ci = this.getIndexByScrollBarValue(scrollBarValue, true);
+        console.log("ci=============== ", ci);
+
+        let i = tweeningData.startFocusedIndex, oi = this.getOriginalIndex(i), c = 0;
+
+       // const distOffset = this.getScrollBarValueByIndex(i, true) - (scrollBarValue + this._focusPos); // i项中间-可视区焦点处的偏移量
+        this._tempIndices.length = 0;
+        this._tempIndices.push(oi);
+
+        while (i !== ci) {
+            i = (i + speedSign + this._itemCount) % this._itemCount; // 下一个索引
+            if (!this.getItemfocusable(i)) i -= speedSign * this._originalItemCount;
+            oi = this.getOriginalIndex(i);
+            if (this._tempIndices.indexOf(oi) > -1) continue;
+            this._tempIndices.push(oi);
+            c++;
+            console.log(i, c);
+            if (c >= this._originalItemCount - 1) break;
+        }
+
+        return this._cellSize * c/* + speedSign * distOffset*/;
     }
 
     /** 获取距离最近的结果的滚动条值 */

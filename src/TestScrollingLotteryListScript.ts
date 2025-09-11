@@ -19,7 +19,7 @@ export class TestScrollingLotteryListScript extends Laya.Script {
     numberList: Laya.List;
 
     onAwake(): void {
-        // 水平滚动
+        // // 水平滚动
         // const hListData = [];
         // for (let i = 0; i < 5; i++)hListData.push({ Label: `${i}` });
         // this.hList.array = hListData;
@@ -56,18 +56,22 @@ export class TestScrollingLotteryListScript extends Laya.Script {
 
     onKeyDown(evt: Laya.Event): void {
         if (evt.key === 'h') {
-            this.hList.getComponent(ScrollingLotteryListScript).startScrolling((Math.random() > 0.5 ? 1 : -1) * (Math.random() * 1000 + 1000), 0.01);
-            this.vList.getComponent(ScrollingLotteryListScript).startScrolling((Math.random() > 0.5 ? 1 : -1) * (Math.random() * 1000 + 1000), 0.01);
+            //this.hList.getComponent(ScrollingLotteryListScript).startScrolling((Math.random() > 0.5 ? 1 : -1) * (Math.random() * 1000 + 1000), 0.01);
+            this.hList.getComponent(ScrollingLotteryListScript).startScrolling(100, 0.01);
+            
+            //this.vList.getComponent(ScrollingLotteryListScript).startScrolling((Math.random() > 0.5 ? 1 : -1) * (Math.random() * 1000 + 1000), 0.01);
         } else if (evt.key === 'j') {
             const resultIndex = Math.trunc(Math.random() * 5);
             console.log("设置结果", resultIndex);
             this.hList.getComponent(ScrollingLotteryListScript).setResult(resultIndex);
-            this.vList.getComponent(ScrollingLotteryListScript).setResult(resultIndex);
+            
+            //this.vList.getComponent(ScrollingLotteryListScript).setResult(resultIndex);
         } else if (evt.key === 'k') {
             const resultIndex = Math.trunc(Math.random() * 5);
             console.log("立即设置到结果处", resultIndex);
             this.hList.getComponent(ScrollingLotteryListScript).setResult(resultIndex, true);
-            this.vList.getComponent(ScrollingLotteryListScript).setResult(resultIndex, true);
+
+            //this.vList.getComponent(ScrollingLotteryListScript).setResult(resultIndex, true);
         }
 
 
@@ -79,6 +83,10 @@ export class TestScrollingLotteryListScript extends Laya.Script {
         } else if (evt.key === 'i') {
             const resultIndex = Math.trunc(Math.random() * 5);
             console.log("设置结果", resultIndex, this.letterList.array[resultIndex].Label);
+            this.letterList.getComponent(ScrollingLotteryListScript).setResult(resultIndex);
+        } else if (evt.key === 'o') {
+            const resultIndex = Math.trunc(Math.random() * 5);
+            console.log("立即设置到结果处", resultIndex, this.letterList.array[resultIndex].Label);
             this.letterList.getComponent(ScrollingLotteryListScript).setResult(resultIndex, true);
         }
     }

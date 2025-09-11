@@ -22,7 +22,9 @@
       "letterList": {
         "_$ref": "maucymo2"
       },
-      "numberList": null
+      "numberList": {
+        "_$ref": "s0fi6cwi"
+      }
     }
   ],
   "_$child": [
@@ -93,7 +95,6 @@
               "y": 69,
               "width": 15,
               "height": 31,
-              "visible": false,
               "bottom": 0,
               "centerX": 0,
               "text": "-",
@@ -178,7 +179,6 @@
       "y": 363,
       "width": 100,
       "height": 225,
-      "visible": false,
       "_gcmds": [
         {
           "_$type": "DrawLineCmd",

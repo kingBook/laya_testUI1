@@ -15,6 +15,8 @@ enum Flag {
 interface ITweeningData {
     /** 缓动到结果开始时焦点下的索引 */
     startFocusedIndex: number;
+    /** 缓开始时，焦点项中心-焦点中心 */
+    distanceOffsetToFocus: number;
     /** 缓动到结果时的速度长度 */
     speedAbs: number;
     /** 缓动到结果时的速度符号 */
@@ -160,12 +162,15 @@ export class ScrollingLotteryListScript extends Laya.Script {
                         if (isFocusIndexEqualToNextIndex) {
                             this._flags |= Flag.TweeningToResult;
                             this.isShowLogMsg && console.log("缓动开始 focusedIndex:", focusedIndex);
+
                             // 缓动数据
+                            const resultData = this.getTweeningResultData(speedSign, focusedIndex);
                             this._tweeningData = {
                                 startFocusedIndex: focusedIndex,
+                                distanceOffsetToFocus: resultData.distanceOffsetToFocus,
                                 speedAbs: Math.abs(this._speed),
                                 speedSign: speedSign,
-                                distanceToResult: this.getTweeningDistanceToResult(speedSign, focusedIndex),
+                                distanceToResult: resultData.distanceToResult,
                                 distance: 0
                             }
                         }
@@ -180,29 +185,35 @@ export class ScrollingLotteryListScript extends Laya.Script {
         // 缓动到结果中...
         if (this._flags & Flag.TweeningToResult) {
             //test
-            this._speed = 0;
+            // this._speed = 0;
+            const dist = this.getTweeningDistance(this._tweeningData, this._scrollBar.value);
 
-            console.log("startFocusedIndex", this._tweeningData.startFocusedIndex);
-            console.log("dist",this.getTweeningDistance(this._tweeningData, this._scrollBar.value), "distToResult",this._tweeningData.distanceToResult);
-            return;
+            // return;
 
             this._tweeningData.distance += Math.abs(this._speed * deltaTime);
-            const t = this._tweeningData.distance / this._tweeningData.distanceToResult;
+            //const t = this._tweeningData.distance / this._tweeningData.distanceToResult;
+
+            const t = dist / this._tweeningData.distanceToResult;
+
             if (t >= 1) {
                 //console.log("speedSign:", this._tweeningData.speedSign, "value:", this._scrollBar.value);
-                const nearestResultVal = this.getNearestResultScrollBarValue(this._scrollBar.value);
-                const sign = this._tweeningData.speedSign;
-                const reached = sign > 0
-                    ? this._scrollBar.value >= nearestResultVal
-                    : this._scrollBar.value <= nearestResultVal;
 
-                if (reached) { // 到达结果处
-                    this._scrollBar.value = nearestResultVal;
-                    this.stopScrolling();
-                } else { // 未到达结果处，最小滚动速度继续移动
-                    this._speed = this.minSpeed * sign;
-                }
+                this.stopScrolling();
+                /*
+                                const nearestResultVal = this.getNearestResultScrollBarValue(this._scrollBar.value);
+                                const sign = this._tweeningData.speedSign;
+                                const reached = sign > 0
+                                    ? this._scrollBar.value >= nearestResultVal
+                                    : this._scrollBar.value <= nearestResultVal;
+                
+                                if (reached) { // 到达结果处
+                                    this._scrollBar.value = nearestResultVal;
+                                    this.stopScrolling();
+                                } else { // 未到达结果处，最小滚动速度继续移动
+                                    this._speed = this.minSpeed * sign;
+                                }*/
             } else {
+                console.log("startFocusedIndex", this._tweeningData.startFocusedIndex, "dist", dist, "distToResult", this._tweeningData.distanceToResult, "t", dist / this._tweeningData.distanceToResult, t);
                 const speedMax = this._tweeningData.speedAbs * this._tweeningData.speedSign;
                 const speedMin = this.minSpeed * this._tweeningData.speedSign;
                 this._speed = Laya.MathUtil.lerp(speedMax, speedMin, t);
@@ -392,31 +403,37 @@ export class ScrollingLotteryListScript extends Laya.Script {
     }
 
     /**
-     * 根据速度方向、当前焦点下的索引，获取到结果的总距离
+     * 获取即将缓动的结果数据（焦点项到结果项的总距离、焦点项与焦点处的偏移量）
      */
-    private getTweeningDistanceToResult(speedSign: number, focusedIndex: number): number {
+    private getTweeningResultData(speedSign: number, focusedIndex: number): { distanceOffsetToFocus: number, distanceToResult: number } {
         const scrollBarValue = this.owner.scrollBar.value;
 
         const distOffset = this.getScrollBarValueByIndex(focusedIndex, true) - (scrollBarValue + this._focusPos); // focusedIndex项中间-可视区焦点处的偏移量
-        const distToResult = this._cellSize * (this._originalItemCount - 1) + speedSign * distOffset;
+        const distToResult = (this._cellSize * (this._originalItemCount - 1)) + (speedSign * distOffset);
         /*this.isShowLogMsg && */console.log("getTweeningDistanceToResult: distOffset:", distOffset, "distToResult:", distToResult);
-        return distToResult;
+        return { distanceOffsetToFocus: distOffset, distanceToResult: distToResult };
     }
 
+    /** 获取缓动到结果过程中的当前距离 */
     private getTweeningDistance(tweeningData: ITweeningData, scrollBarValue: number): number {
         const speedSign = tweeningData.speedSign;
-        const ci = this.getIndexByScrollBarValue(scrollBarValue, true);
+        const ci = this.getIndexByScrollBarValue(scrollBarValue, true); // 当前项索引
+        const distOffsetC = this.getScrollBarValueByIndex(ci, true) - (scrollBarValue + this._focusPos); // 当前项中间-可视区焦点处的偏移量
         console.log("ci=============== ", ci);
 
         let i = tweeningData.startFocusedIndex, oi = this.getOriginalIndex(i), c = 0;
 
-       // const distOffset = this.getScrollBarValueByIndex(i, true) - (scrollBarValue + this._focusPos); // i项中间-可视区焦点处的偏移量
+
         this._tempIndices.length = 0;
         this._tempIndices.push(oi);
 
         while (i !== ci) {
             i = (i + speedSign + this._itemCount) % this._itemCount; // 下一个索引
-            if (!this.getItemfocusable(i)) i -= speedSign * this._originalItemCount;
+            console.log("i:", i, this.getOriginalIndex(i), this.getItemfocusable(i));
+            if (i !== ci && !this.getItemfocusable(i)) {
+                i -= speedSign * this._originalItemCount;
+                console.log("reset i", i);
+            }
             oi = this.getOriginalIndex(i);
             if (this._tempIndices.indexOf(oi) > -1) continue;
             this._tempIndices.push(oi);
@@ -425,7 +442,7 @@ export class ScrollingLotteryListScript extends Laya.Script {
             if (c >= this._originalItemCount - 1) break;
         }
 
-        return this._cellSize * c/* + speedSign * distOffset*/;
+        return (this._cellSize * c) + (speedSign * tweeningData.distanceOffsetToFocus) - (speedSign * distOffsetC);
     }
 
     /** 获取距离最近的结果的滚动条值 */

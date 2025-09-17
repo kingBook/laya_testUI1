@@ -30,7 +30,7 @@ interface ITweeningData {
 /**
  * 循环滚动抽奖列表
  * 
- * 基本用法：
+ * * 用法示例：
  * ```
  * // 初始化列表
  * const list = this.owner.getChild("list", Laya.List);
@@ -38,8 +38,7 @@ interface ITweeningData {
  * list.array = [{ Label: "A" }, { Label: "B" }, { Label: "C" }, { Label: "D" }, { Label: "E" }];
  * 
  * // 添加滚动组件，并初始化
- * const lotteryScript = this.list.addComponent(ScrollingLotteryListScript);
- * lotteryScript.init(); // 需在 list.array 赋值后调用，且不能赋值空数组
+ * const lotteryScript = this.list.addComponent(ScrollingLotteryListScript).init(); // 需在 list.array 赋值后调用初始化，且不能赋值空数组
  * lotteryScript.owner.on(ScrollingLotteryListScript.EVENT_TWEEN_COMPLETE, () => {
  *     console.log("滚动列表缓动到结果项完成");
  * });
@@ -48,7 +47,7 @@ interface ITweeningData {
  * lotteryScript.startScrolling(1000);
  * 
  * // 间隔一会儿, 设置结果
- * Laya.timer.once(2000, this, () => {
+ * lotteryScript.delay(2000).then(() => {
  *     lotteryScript.setResult(4, false); // false: 非立即设置到结果处
  * });
  * ```
@@ -234,7 +233,7 @@ export class ScrollingLotteryListScript extends Laya.Script {
                     // 派发缓动完成事件
                     this.owner.event(ScrollingLotteryListScript.EVENT_TWEEN_COMPLETE);
                     this.stopScrolling();
-                } else { // 未到达结果处，最小滚动速度继续移动
+                } else { // 未到达结果处，最小滚动速度继续滚动
                     this._speed = this.minSpeed * sign;
                 }
             } else {
@@ -365,10 +364,6 @@ export class ScrollingLotteryListScript extends Laya.Script {
     public onDisable(): void {
         // 清除延时
         this.clearDelay();
-    }
-
-    public onDestroy(): void {
-
     }
 
     /** 获取指定索引的原始索引 */

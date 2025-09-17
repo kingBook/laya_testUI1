@@ -60,7 +60,7 @@ export class ScrollingLotteryListScript extends Laya.Script {
 
     declare owner: Laya.List;
 
-    /** 聚集点，范围：[0,1] */
+    /** 聚集点插值，范围：[0,1] */
     public focusT = 0.5;
     /** 启动后，逐渐加速最终到达的目标速度<像素/秒> */
     public targetSpeed: number = 1000;
@@ -70,7 +70,7 @@ export class ScrollingLotteryListScript extends Laya.Script {
     public minSpeed: number = 40;
     /** 用于指定设置了结果后，速度下降到指定的程度（targetSpeed * 此值），开始缓动到结果，范围[0,1] */
     public tweenThresholdT: number = 0.5;
-    /** 设置结果后降速摩擦系数 */
+    /** 设置结果后降速摩擦系数，范围[0,1] */
     public resultFriction: number = 0.985;
     /** 是否显示 log */
     public isShowLogMsg: boolean = false;
@@ -86,18 +86,22 @@ export class ScrollingLotteryListScript extends Laya.Script {
     /** 符合结果的索引（因为列表末尾有一些项是重复的，所以符合结果的项可能会有两个, 最多只会有两个, 有可能只有一个，且[1]的值一定比[0]的值大， [0]:原索引, [1]:重复索引） */
     private _resultIndices: number[] = [];
 
-    // 缓动时的数据
+    /** 缓动时的数据 */
     private _tweeningData: ITweeningData;
 
     private _scrollBar: Laya.ScrollBar;
+    /** 列表项的大小 */
     private _itemSize: number;
+    /** 一格的大小（列表项大小加间距） */
     private _cellSize: number;
+    /** 聚焦的位置 */
     private _focusPos: number;
 
     /** 原始项数 */
     private _originalItemCount: number;
     /** 加额外重复项的总项数 */
     private _itemCount: number;
+    
 
     /** 是否已初始化 */
     public get isInited(): boolean { return (this._flags & Flag.Inited) > 0; }
@@ -162,7 +166,7 @@ export class ScrollingLotteryListScript extends Laya.Script {
 
         // 刷新列表
         this.owner.refresh();
-
+        // 清除延时
         this.clearDelay();
         return this;
     }

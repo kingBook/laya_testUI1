@@ -29,9 +29,35 @@ interface ITweeningData {
 
 /**
  * 循环滚动抽奖列表
+ * 
+ * 基本用法：
+ * ```
+ * // 初始化列表
+ * const list = this.owner.getChild("list", Laya.List);
+ * list.scrollType = Laya.ScrollType.Horizontal; // 必须是水平/垂直滚动
+ * list.array = [{ Label: "A" }, { Label: "B" }, { Label: "C" }, { Label: "D" }, { Label: "E" }];
+ * 
+ * // 添加滚动组件，并初始化
+ * const lotteryScript = this.list.addComponent(ScrollingLotteryListScript);
+ * lotteryScript.init(); // 需在 list.array 赋值后调用，且不能赋值空数组
+ * lotteryScript.owner.on(ScrollingLotteryListScript.EVENT_TWEEN_COMPLETE, () => {
+ *     console.log("滚动列表缓动到结果项完成");
+ * });
+ * 
+ * // 开始滚动
+ * lotteryScript.startScrolling(1000);
+ * 
+ * // 间隔一会儿, 设置结果
+ * Laya.timer.once(2000, this, () => {
+ *     lotteryScript.setResult(4, false); // false: 非立即设置到结果处
+ * });
+ * ```
  */
 @regClass()
 export class ScrollingLotteryListScript extends Laya.Script {
+
+    /** 滚动列表缓动到结果项后触发的事件名 (事件由 {@link owner} 派发) */
+    public static readonly EVENT_TWEEN_COMPLETE: string = "eventTweenComplete";
 
     declare owner: Laya.List;
 
@@ -68,21 +94,31 @@ export class ScrollingLotteryListScript extends Laya.Script {
     private _itemSize: number;
     private _cellSize: number;
     private _focusPos: number;
+
     /** 原始项数 */
     private _originalItemCount: number;
     /** 加额外重复项的总项数 */
     private _itemCount: number;
 
+    /** 是否已初始化 */
+    public get isInited(): boolean { return (this._flags & Flag.Inited) > 0; }
     /** 滚动中... */
     public get isScrolling(): boolean { return (this._flags & Flag.Scrolling) > 0; }
     /** 暂停中... */
     public get isPaused(): boolean { return (this._flags & Flag.Paused) > 0; }
+    /** 缓动到结果中... */
+    public get isTweeningToResult(): boolean { return (this._flags & Flag.TweeningToResult) > 0; }
+
 
 
     /** 初始化 */
     public init(): ScrollingLotteryListScript {
         if (this.owner.scrollType !== Laya.ScrollType.Horizontal && this.owner.scrollType !== Laya.ScrollType.Vertical) {
             throw new Error("使用此组件时, 列表必须是水平或垂直滚动类型");
+        }
+
+        if (!this.owner.array || this.owner.array.length <= 0) {
+            throw new Error("必须在列表数据源数组赋值后调用此方法，且不能赋值空数组");
         }
 
         this._flags = Flag.Inited;
@@ -195,6 +231,8 @@ export class ScrollingLotteryListScript extends Laya.Script {
 
                 if (reached) { // 到达结果处
                     this._scrollBar.value = nearestResultVal;
+                    // 派发缓动完成事件
+                    this.owner.event(ScrollingLotteryListScript.EVENT_TWEEN_COMPLETE);
                     this.stopScrolling();
                 } else { // 未到达结果处，最小滚动速度继续移动
                     this._speed = this.minSpeed * sign;
@@ -247,6 +285,7 @@ export class ScrollingLotteryListScript extends Laya.Script {
 
         // 取消暂停
         this.setPaused(false);
+        // 清除延时
         this.clearDelay();
         return this;
     }
@@ -307,6 +346,7 @@ export class ScrollingLotteryListScript extends Laya.Script {
     public setPaused(value: boolean): ScrollingLotteryListScript {
         if (value) this._flags |= Flag.Paused;
         else this._flags &= ~Flag.Paused;
+        // 清除延时
         this.clearDelay();
         return this;
     }
@@ -317,11 +357,13 @@ export class ScrollingLotteryListScript extends Laya.Script {
         this._speed = 0;
         this._flags &= ~Flag.TweeningToResult;
         this._flags &= ~Flag.Scrolling;
+        // 清除延时
         this.clearDelay();
         return this;
     }
 
     public onDisable(): void {
+        // 清除延时
         this.clearDelay();
     }
 

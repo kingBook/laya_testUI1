@@ -61,18 +61,25 @@ export class ScrollingLotteryListScript extends Laya.Script {
     declare owner: Laya.List;
 
     /** 聚集点插值，范围：[0,1] */
+    @property({ type: Number, range: [0, 1], tips: "聚集点插值，范围：[0,1]" })
     public focusT = 0.5;
-    /** 启动后，逐渐加速最终到达的目标速度<像素/秒> */
-    public targetSpeed: number = 1000;
     /** 启动加速度系数， 区间为：[0,1] */
+    @property({ type: Number, range: [0, 1], tips: "启动加速度系数， 区间为：[0,1]" })
     public startupAccelT: number = 0.1;
-    /** 最小速度<像素/秒, 正数> */
-    public minSpeed: number = 40;
-    /** 用于指定设置了结果后，速度下降到指定的程度（targetSpeed * 此值），开始缓动到结果，范围[0,1] */
+    /** 用于指定设置了结果后, 速度下降到指定的程度 (targetSpeed * 此值), 开始缓动到结果，范围[0,1] */
+    @property({ type: Number, range: [0, 1], tips: "用于指定设置了结果后, 速度下降到指定的程度 (targetSpeed * 此值), 开始缓动到结果，范围[0,1]" })
     public tweenThresholdT: number = 0.5;
     /** 设置结果后降速摩擦系数，范围[0,1] */
+    @property({ type: Number, range: [0, 1], tips: "设置结果后降速摩擦系数，范围[0,1]" })
     public resultFriction: number = 0.985;
+    /** 最小速度<像素/秒, 正数> */
+    @property({ type: Number, min: 0.1, tips: "最小速度<像素/秒, 正数>" })
+    public minSpeed: number = 40;
+    /** 启动后，逐渐加速最终到达的目标速度<像素/秒> */
+    @property({ type: Number, tips: "启动后，逐渐加速最终到达的目标速度<像素/秒>" })
+    public targetSpeed: number = 1000;
     /** 是否显示 log */
+    @property({ type: Boolean, tips: "是否显示 log" })
     public isShowLogMsg: boolean = false;
 
     /** 额外添加的重复列表项数量 */
@@ -101,7 +108,7 @@ export class ScrollingLotteryListScript extends Laya.Script {
     private _originalItemCount: number;
     /** 加额外重复项的总项数 */
     private _itemCount: number;
-    
+
 
     /** 是否已初始化 */
     public get isInited(): boolean { return (this._flags & Flag.Inited) > 0; }
@@ -415,7 +422,7 @@ export class ScrollingLotteryListScript extends Laya.Script {
     /**
      * 获取指定列表项滚动条的值
      * @param index 列表项索引
-     * @param isCentral 是否取列表项中间的滚动条值，默认： false 取列表项左/顶在列表可视区左/顶的滚动条值；true：取列表项的中间在列表可视区左/顶的滚动条值
+     * @param isCentral 是否取列表项中间的滚动条值，默认： false 取列表项左/上在列表可视区左/上的滚动条值；true：取列表项的中间在列表可视区左/上的滚动条值
      */
     private getScrollBarValueByIndex(index: number, isCentral: boolean = false): number {
         if (index < 0 || index > this._itemCount - 1) throw new Error(`索引超出范围, i:${index}, itemCount:${this._itemCount}`);
@@ -428,7 +435,7 @@ export class ScrollingLotteryListScript extends Laya.Script {
     /**
      * 根据滚动条值获取列表项索引
      * @param scrollBarValue 滚动条值
-     * @param isFocused 如果 true ，则获取位于焦点下的索引，false 时，则列表可视区域左/上边缘的索引
+     * @param isFocused 如果 true ，则获取位于焦点下的索引，false 时，则列表可视区域左/上的索引
      * @returns 
      */
     private getIndexByScrollBarValue(scrollBarValue: number, isFocused: boolean): number {
@@ -467,7 +474,7 @@ export class ScrollingLotteryListScript extends Laya.Script {
                 nearestValue = val;
             }
         }
-        // 滚动条值从焦点处转为从左开始
+        // 滚动条值从焦点处转为从左/上开始
         nearestValue -= this._focusPos;
         return nearestValue;
     }

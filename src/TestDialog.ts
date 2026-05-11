@@ -7,7 +7,24 @@ export class TestDialog extends Laya.Script {
     @property({ type: Laya.Prefab, private: false })
     private _dialogPrefab: Laya.Prefab;
 
+    private _dialog: Laya.Dialog;
+
     onAwake(): void {
-        this.owner.addChild(this._dialogPrefab.create());
+        
+    }
+
+    onKeyDown(evt: Laya.Event): void {
+        if(evt.key==='h'){
+            this.openDialog();
+        }
+    }
+
+    private openDialog():void{
+        this._dialog = this._dialogPrefab.create() as Laya.Dialog;
+
+        this._dialog.isModal = false;
+        this._dialog.isPopupCenter = true;
+        this._dialog.isShowEffect = true;
+        this._dialog.open(false);
     }
 }

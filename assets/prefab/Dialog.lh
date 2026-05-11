@@ -35,6 +35,21 @@
       "labelSize": 20,
       "labelAlign": "center",
       "labelVAlign": "middle"
+    },
+    {
+      "_$id": "0rf7pqfb",
+      "_$type": "Box",
+      "name": "DialogBody",
+      "x": 23,
+      "y": 23,
+      "width": 200,
+      "height": 200,
+      "_$comp": [
+        {
+          "_$type": "c2c17b4e-2828-4a96-9a12-dc4beed8b597",
+          "scriptPath": "../src/DialogBody.ts"
+        }
+      ]
     }
   ]
 }
